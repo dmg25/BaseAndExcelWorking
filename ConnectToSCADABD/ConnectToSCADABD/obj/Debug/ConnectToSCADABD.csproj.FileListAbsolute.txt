@@ -1,0 +1,9 @@
+c:\users\erfinder\documents\visual studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe.config
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.pdb
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csprojResolveAssemblyReference.cache
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
