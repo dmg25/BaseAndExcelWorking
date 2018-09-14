@@ -7,3 +7,12 @@ C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\Connect
 C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
 C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
 C:\Users\Erfinder\Documents\Visual Studio 2012\Projects\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe.config
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.pdb
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csprojResolveAssemblyReference.cache
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
