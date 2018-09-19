@@ -2,7 +2,7 @@
  * 1.+ Диагностика неправильного файла экспорта (сообщение и возврат к началу)
  * 2.+ Блокировку кнопок, чтобы не сделать один этап раньше момента
  * 3.+ Добавить нормальный путь для сохранения файла и прописывать ему автоимя
- * 4. Сделать раскрывающийся список с ЛИСТАМИ и под каждый (приписывая тип объекта),
+ * 4.+ Сделать раскрывающийся список с ЛИСТАМИ и под каждый (приписывая тип объекта),
  *    сделать свой выбор параметров канала
  * 5. Нам не нужно записывать каждый канал. Подумать, каким образом это осуществить.
  * 6.+ Реакция на нажатие кнопки ОТМЕНА при открытии и сохранении
@@ -32,6 +32,10 @@ using System.Globalization;
 using FirebirdSql.Data.FirebirdClient;
 
 using Excel = Microsoft.Office.Interop.Excel;
+using ExcelLibrary.BinaryDrawingFormat;
+using ExcelLibrary.BinaryFileFormat;
+using ExcelLibrary.SpreadSheet;
+using ExcelLibrary.CompoundDocumentFormat;
 
 
 namespace ConnectToSCADABD
@@ -56,15 +60,18 @@ namespace ConnectToSCADABD
         bool FirstIter; // переменная для создания sql запроса, убирающая одну запятую
         string SaveXlsPath; //Путь к ПАПКЕ для сохронения файла для импорта
 
+        int preIndexCombobox; //индекс предыдущего выбранного типа, для того чтобы его сохранить при выборе следующего.
         int ObjCounter; // счетчик для замены цифры ПЛК на его название в повторном SQL запросе
         int ParamsCounter = 9; //временная переменная, указывающая кол-во параметров в канале
         List<int> ObjID = new List<int>();  // массив с прочитанными ID из Excel
         List<int> ObjTypeID = new List<int>(); //массив типов объектов
         List<int> ObjTypeIDUnic = new List<int>(); //массив типов объектов без повторений
         List<string> ObjTypeChannelsList = new List<string>(); //список каналов типа объекта
+        List<Worksheet> Sheets = new List<Worksheet>();  // список листов, перезапись не катит, так как они до сохранения висят в памяти.
 
         int TablesNum;
-        bool readdenID; // триггер успешно прочитанного файла
+        bool readID; // триггер успешно прочитанного файла
+        bool readBD; // триггер успешно прочитанной БД
 
 
 //checklist для выбора параметров канала--------
@@ -153,23 +160,37 @@ namespace ConnectToSCADABD
 
         private void button1_Click(object sender, EventArgs e)
         {
+            readBD = false;
             BaseAddr = textBox2.Text;
             ConStr = "character set=WIN1251;initial catalog=" + BaseAddr + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
             TeconObjectChannels.Clear(); // очистка предыдущего поиска
             TeconObjects.Clear();
+            ObjTypeID.Clear();
+            preIndexCombobox = 0;
             textBox1.AppendText( "Начат сбор данных из БД;\n");
+
             // textBox1.ScrollToCaret();
+            int i=0;
             foreach (int ID in ObjID)   // для каждого распознанного ID делаем SQL запрос с последующими действиями
             {
                 AddObjChannel(ID);     //добавляем каждый канал каждого тех объекта в список
                 AddObj(ID);            //делаем список тех объектов, содержащий списки каналов
+                i++;
+                label1.Text = "Прогресс: " + i + "/" + ObjID.Count.ToString();
+               // textBox1.Lines[textBox1.Lines.Length-1] = "Прогресс: " + i + "/" + ObjID.Count.ToString();
+               // MessageBox.Show((textBox1.Lines.Length - 1).ToString() + ";" + ObjID.Count.ToString());
             }
+            FullKlName(); // находим полный путь для классификатора
             textBox1.AppendText( "Прочитаны данные из БД;\n");
             FindTypes();           //разбираем объекты на типы, ищем типы с одинаковыми каналами, присваиваем индексы
             textBox1.AppendText("Данные обработаны;\n");
             ShowData();            //показываем выбранные данные в таблице на форме
             textBox1.AppendText("Данные готовы к сохранению;\n");
             // textBox1.ScrollToCaret();
+            readBD = true;
+            EnabledCheck();
+            ChOptionsToAll();
+
             button4.Enabled = true;
         }
 
@@ -191,6 +212,9 @@ namespace ConnectToSCADABD
                             System.Reflection.Assembly.GetExecutingAssembly().Location));
                         return;
                     }
+
+                    //Добавим условие, при котором будет происходить цикличный SQL запрос не теряя подключения (для ускорения выбора данных по ID)
+
 
                     // Транзакция, которая тупо откуда-то скопирована
                     FbTransactionOptions fbto = new FbTransactionOptions();
@@ -289,12 +313,13 @@ namespace ConnectToSCADABD
                 PLC_varname = dt1.Rows[0][12].ToString(),
                 PLC_address = dt1.Rows[0][13].ToString(),
                 Channels = TeconObjectChannels.ToList(),
-
                 ObjTypeID = Convert.ToInt16(dt1.Rows[0][14]),
             };
 
 
             ObjTypeID.Add(Convert.ToInt16(dt1.Rows[0][14])); // заполняем список типами объектов
+
+           // MessageBox.Show("ObjTypeID: " + ObjTypeID.Count.ToString());
 
             // Делаем короткий запрос для получения имени контроллера, ибо в едином запросе такое хз как сделать
             ConnectToBase("Select CARDS.MARKA from CARDS where CARDS.ID = " + obj.PLC_Name);
@@ -304,20 +329,63 @@ namespace ConnectToSCADABD
             TeconObjectChannels.Clear();
         }
 
+        private void FullKlName() 
+        {
+            //SQL_CARDS = "Select CARDS.MARKA, CARDS.NAME, CARDS.DISC, OBJTYPE.NAME, CARDS.ARH_PER, CARDS.OBJSIGN, CARDS.PLC_ID, CARDS.PLC_GR, EVKLASSIFIKATOR.NAME, CARDS.KKS, ISAOBJ.NAME, KLASSIFIKATOR.NAME, CARDS.PLC_VARNAME, CARDS.PLC_ADRESS, CARDS.OBJTYPEID from CARDS, OBJTYPE, KLASSIFIKATOR, EVKLASSIFIKATOR, ISAOBJ, RESOURCES where CARDS.ID = " + ID + " and CARDS.OBJTYPEID = OBJTYPE.ID and CARDS.EVKLID = EVKLASSIFIKATOR.ID and CARDS.TEMPLATEID = ISAOBJ.ID and CARDS.KLID = KLASSIFIKATOR.ID";
+            string SQL_KLASS = "Select * from KLASSIFIKATOR";
+            ConnectToBase(SQL_KLASS);
+
+            foreach (TeconObject obj in TeconObjects)
+            {
+                string KlassPath = obj.KLASSIFIKATORNAME;
+                int TmpID = 0;
+
+                string st = "";
+                for (int i = 0; i < dt1.Rows.Count; i++)
+                {
+                    st = dt1.Rows[i][2].ToString();   // выбираем НАЗВАНИЕ
+                    if (st == obj.KLASSIFIKATORNAME) { TmpID = Convert.ToInt16(dt1.Rows[i][1]); /*выбираем PID*/ break; }
+                }
+
+
+                while (TmpID != 0)
+                {
+                    //foundRows = dt1.Select(TmpID.ToString(), "PID"); //не надо ли oчищать массив?
+
+                    for (int i = 0; i < dt1.Rows.Count; i++)
+                    {
+                        if ((Convert.ToInt16(dt1.Rows[i][0]) == TmpID)) 
+                        {
+                            TmpID = Convert.ToInt16(dt1.Rows[i][1]);
+                            if (TmpID == 0) { break; }
+                            KlassPath = Convert.ToString(dt1.Rows[i][2]) + @"\" + KlassPath;
+                            break; 
+                        }
+                    }                  
+                }
+               // MessageBox.Show("Результат: " + KlassPath);
+                obj.KLASSIFIKATORNAME = KlassPath;
+            }
+
+        }
+
+
+
         private void FindTypes()
         {
+            ObjTypeIDUnic.Clear();
+            ObjTypeCh.Clear(); // для повторной активации функции
+            ObjTypeChannelsList.Clear();
+
         ObjTypeIDUnic = ObjTypeID.Distinct().ToList(); //убираем повторяющиеся типы объектов
 
        // TablesNum = 0;
-        ObjTypeCh.Clear(); // для повторной активации функции
+
 
         foreach (int id in ObjTypeIDUnic)
         {
             SQL_OBJTYPES = "Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.PID = " + id;
             ConnectToBase(SQL_OBJTYPES);
-            
-
-           // textBox1.Clear();
 
             for (int i = 0; i < dt1.Rows.Count; i++)
             {
@@ -330,8 +398,9 @@ namespace ConnectToSCADABD
                 Channels = ObjTypeChannelsList.ToList(),
                 Index = 0,  // 0 - значит индекс еще не заполнен
             };
-
+            
             ObjTypeCh.Add(ObjTypeCh1); //заполняем список с каналами типа объекта
+           
         }
 
         
@@ -353,6 +422,7 @@ namespace ConnectToSCADABD
                         ObjTypeCh[i].Index = k;
                         ObjTypeCh[j].Index = ObjTypeCh[i].Index;
                         k++;
+                       // MessageBox.Show("Новый тип: №" + k.ToString());
                     }
                 }
             }
@@ -367,6 +437,7 @@ namespace ConnectToSCADABD
             {
                 ObjTypeCh[i].Index = k;
                 k++;
+                //MessageBox.Show("Новый тип: №" + k.ToString());
             }
         }
 
@@ -470,7 +541,7 @@ namespace ConnectToSCADABD
               {
                   if (to.Index == i) { p++; s = to.ObjTypeName; }
               }
-              textBox1.AppendText("Лист"+i.ToString() +": " + p.ToString() + ", "+s + ";\n");
+              textBox1.AppendText("Лист" + i.ToString() + ": " + p.ToString() + ", "+s + ";\n");
               comboBox1.Items.Add("Лист" + i.ToString() + "; " + s);
                var STP = new SaveTableParams()
                   {
@@ -483,26 +554,28 @@ namespace ConnectToSCADABD
           //label1.Text = SaveTablesParamsList.Count.ToString();
           // textBox1.ScrollToCaret();
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
         }
-
-
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------      
 
         
           private void button3_Click(object sender, EventArgs e)
         {
+            readID = false;
+
             //Открываем файл Экселя
             openFileDialog1.Filter = "Excel files (*.xls;*.xlsx)|*.xls;*.xlsx";
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 //Создаём приложение.
-               Excel.Application ObjExcel = new Excel.Application();
+           //    Excel.Application ObjExcel = new Excel.Application();
+                Workbook book = Workbook.Load(openFileDialog1.FileName);
+
                 //Открываем книгу.                                                                                                                                                        
-               Excel.Workbook ObjWorkBook = ObjExcel.Workbooks.Open(openFileDialog1.FileName, 0, false, 5, "", "", false,Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+             //  Excel.Workbook ObjWorkBook = ObjExcel.Workbooks.Open(openFileDialog1.FileName, 0, false, 5, "", "", false,Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                 //Выбираем таблицу(лист).
-               Excel.Worksheet ObjWorkSheet;
-                ObjWorkSheet = (Microsoft.Office.Interop.Excel.Worksheet)ObjWorkBook.Sheets[1];
+            //   Excel.Worksheet ObjWorkSheet;
+            //    ObjWorkSheet = (Microsoft.Office.Interop.Excel.Worksheet)ObjWorkBook.Sheets[1];
+                Worksheet sheet = book.Worksheets[0];
 
                 SQLParams = ""; //очищаем предыдущий поиск параметров
                 ObjID.Clear();
@@ -511,19 +584,20 @@ namespace ConnectToSCADABD
                 CellStr = "1";
                // MessageBox.Show(CellStr);
 
-                Excel.Range forYach = ObjWorkSheet.Cells[4, 3] as Excel.Range;
-                if (forYach.Value2.ToString() != "ID")
+                //Excel.Range forYach = ObjWorkSheet.Cells[4, 3] as Excel.Range;
+                if (Convert.ToString(sheet.Cells[3, 2]) != "ID")
                 {
-                    MessageBox.Show("Выбран некорректный файл экспорта: Найдено: "+ forYach.Value2.ToString() + " вместо ID!" );
+                    MessageBox.Show("Выбран некорректный файл экспорта: Найдено: "+ Convert.ToString(sheet.Cells[3, 2]) + " вместо ID!" );
                     return;
                 }
-
-                while (CellStr != "")  //будем читать столбец, пока не найдем пустую ячейку
+                string CellContent = "";
+                while (CellStr.Length > 0)  //будем читать столбец, пока не найдем пустую ячейку
                 {
-                    
-                   Excel.Range range = ObjWorkSheet.get_Range("C" + (ExcelCellCnt + 5).ToString());
-                    CellStr = range.Text.ToString();
-                    if (CellStr != "") { CellInt = Convert.ToInt16(CellStr); ObjID.Add(CellInt);} //Убрать потом как-нибудь это условие, чтобы не дублировалось                
+                    //MessageBox.Show();
+                //   Excel.Range range = ObjWorkSheet.get_Range("C" + (ExcelCellCnt + 5).ToString());
+                    CellStr = Convert.ToString(sheet.Cells[4 + ExcelCellCnt, 2]);  //[строка/столбец]
+                   // CellStr = range.Text.ToString();
+                    if (CellStr.Length > 0) { CellInt = Convert.ToInt16(CellStr); ObjID.Add(CellInt); } //Убрать потом как-нибудь это условие, чтобы не дублировалось                
                     ExcelCellCnt++;
                 }
 
@@ -538,16 +612,24 @@ namespace ConnectToSCADABD
                 });
 
                 //Удаляем приложение (выходим из экселя) - будет висеть в процессах!
-                ObjExcel.Quit();
+               // ObjExcel.Quit();
 
                 //Очищаем от старого текста окно вывода.
-                textBox1.Clear();
-                textBox1.Text = "Файл открыт;\n";
+              //  textBox1.Clear();
+                textBox1.AppendText("========Новый файл=======\n");
+                textBox1.AppendText("Файл открыт;\n");
+                textBox1.AppendText(openFileDialog1.FileName.ToString() + ";\n");
                 textBox1.AppendText("ID объектов считаны (" + ObjID.Count.ToString()+ ")шт.;\n");
                 // textBox1.ScrollToCaret();
-               // readdenID = true;
+                readID = true;
+                readBD = false;
+                
                 button1.Enabled = true;
                 button4.Enabled = false;
+                comboBox1.Items.Clear(); // очистка списка листов
+                SaveTablesParamsList.Clear();
+                EnabledCheck();            
+
             }
         }
 
@@ -555,16 +637,33 @@ namespace ConnectToSCADABD
           private void button4_Click(object sender, EventArgs e)
           {
 
-              /* if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
-               {
-                   SaveXlsPath = folderBrowserDialog1.SelectedPath;
-               }*/
+              //То что выбрано из параметров на момент нажатия кнопки сохранения
+              int j = comboBox1.SelectedIndex;
+              SaveTablesParamsList[j].S0 = checkBox1.Checked;
+              SaveTablesParamsList[j].S100 = checkBox2.Checked;
+              SaveTablesParamsList[j].M = checkBox3.Checked;
+              SaveTablesParamsList[j].PLC_VARNAME = checkBox4.Checked;
+              SaveTablesParamsList[j].ED_IZM = checkBox5.Checked;
+              SaveTablesParamsList[j].ARH_APP = checkBox6.Checked;
+              SaveTablesParamsList[j].DISC = checkBox7.Checked;
+              SaveTablesParamsList[j].KA = checkBox8.Checked;
+              SaveTablesParamsList[j].KB = checkBox9.Checked;
 
+              Sheets.Clear();
               bool SaveWithoutCh = false;
 
-              saveFileDialog1.Filter = "Excel files (*.xls;*.xlsx)|*.xlsx;*.xls";
+
+              //saveFileDialog1.Filter = "Excel files (*.xls;*.xlsx)|*.xlsx;*.xls";
+              saveFileDialog1.Filter = "Excel files (*.xls)|*.xls";
               var culture = new CultureInfo("ru-RU");
-              string name =  "ТеконИмпорт_Листов_" + TablesNum.ToString() + ";_Объектов_" + TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
+              string name = "";
+              if (checkBox11.Checked) 
+              {
+                   name = "ТеконИмпорт_Листов_1;_Объектов_" + TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
+              } else 
+              {
+                   name = "ТеконИмпорт_Листов_" + TablesNum.ToString() + ";_Объектов_" + TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
+              }
               name = name.Replace(":", "_");
               saveFileDialog1.FileName = name;
 
@@ -572,43 +671,42 @@ namespace ConnectToSCADABD
               {
                   SaveXlsPath = saveFileDialog1.FileName;
 
+                  Workbook workbook = new Workbook();
 
                   textBox1.AppendText("Начат процесс сохранения;\n");
-                  // textBox1.ScrollToCaret();
-                  //Объявляем приложение
-                  Excel.Application ex = new Excel.Application();
-                  //Отобразить Excel
-                  //   ex.Visible = true;
 
-
-                  //Проверяем чеклист
-                  bS0 = checkBox1.Checked;
-                  bS100 = checkBox2.Checked;
-                  bM = checkBox3.Checked;
-                  bPLC_VARNAME = checkBox4.Checked;
-                  bED_IZM = checkBox5.Checked;
-                  bARH_APP = checkBox6.Checked;
-                  bDISC = checkBox7.Checked;
-                  bKA = checkBox8.Checked;
-                  bKB = checkBox9.Checked;
                   SaveWithoutCh = checkBox11.Checked;
 
-                  if ((!bS0 && !bS100 && !bM && !bPLC_VARNAME && !bED_IZM && !bARH_APP && !bDISC && !bKA && !bKB && !checkBox11.Checked))
+                  foreach (SaveTableParams st in SaveTablesParamsList)
                   {
-
-                      DialogResult dialogResult = MessageBox.Show("Не выбран ни один параметр канала ни на одном листе! Объединить всё в одну таблицу?", "Не выбраны параметры каналов", MessageBoxButtons.YesNo);
-                      if (dialogResult == DialogResult.Yes)
-                      {
-                          SaveWithoutCh = true;
-                          checkBox11.Checked = true;
-                      }
-                      else if (dialogResult == DialogResult.No)
-                      {
-                          MessageBox.Show("Выберите хотя-бы один параметр.");
-                          return;
-                      }
-
+                      bS0 = st.S0;
+                      bS100 = st.S100;
+                      bM = st.M;
+                      bPLC_VARNAME = st.PLC_VARNAME;
+                      bED_IZM = st.ED_IZM;
+                      bARH_APP = st.ARH_APP;
+                      bDISC = st.DISC;
+                      bKA = st.KA;
+                      bKB = st.KB;
                   }
+
+                   /* if ((!bS0 && !bS100 && !bM && !bPLC_VARNAME && !bED_IZM && !bARH_APP && !bDISC && !bKA && !bKB && !checkBox11.Checked))
+                    {
+
+                        DialogResult dialogResult = MessageBox.Show("Не выбран ни один параметр канала ни на одном листе! Объединить всё в одну таблицу?", "Не выбраны параметры каналов", MessageBoxButtons.YesNo);
+                        if (dialogResult == DialogResult.Yes)
+                        {
+                            SaveWithoutCh = true;
+                            checkBox11.Checked = true;
+                        }
+                        else if (dialogResult == DialogResult.No)
+                        {
+                            MessageBox.Show("Выберите хотя-бы один параметр.");
+                            return;
+                        }
+
+                    }*/
+                  
 
                   int TablesNum1 = 1;
                   if (!SaveWithoutCh)    // если выбран вариант записи без каналов, то всего одна таблица у нас
@@ -616,17 +714,10 @@ namespace ConnectToSCADABD
                       TablesNum1 = TablesNum;
                   }
 
-                  //Количество листов в рабочей книге
-                  ex.SheetsInNewWorkbook = TablesNum1;  // кол-во таблиц = кол-во листов
-                  //Добавить рабочую книгу
-                  Excel.Workbook workBook = ex.Workbooks.Add(Type.Missing);
-
-
                   for (int TblCount = 1; TblCount <= TablesNum1; TblCount++)
                   {
-                      //Получаем первый лист документа (счет начинается с 1)
-                      Excel.Worksheet sheet = (Excel.Worksheet)ex.Worksheets.get_Item(TblCount);
-                      //Название листа (вкладки снизу)
+                      Worksheet sheet = new Worksheet("Name");
+
                       string s = "";
                       if (!SaveWithoutCh)
                       {
@@ -635,155 +726,242 @@ namespace ConnectToSCADABD
                               if (to.Index == TblCount) { s = to.ObjTypeName; break; }
                           }
                       }
-                      sheet.Name = "Лист" + TblCount.ToString() + "; " + s;   // вставляем в название номер таблицы
-                    
+                    //  sheet.Name = "Лист" + TblCount.ToString() + "; " + s;   // вставляем в название номер таблицы
+                      sheet.Name = "Лист" + TblCount.ToString() + "; " + s;
+
+                      for (int i = 0; i <= 100; i++)  // Если будет менее 100 строк подряд, Офис 2010 откажется открыть файл. Фича библиотеки
+                      {
+                          sheet.Cells[i, 1] = new Cell("");
+                      }
                       //заполнения ячеек
                       //Шапка
-                      sheet.Cells[3, 1] = String.Format("№ п/п");
-                      sheet.Cells[3, 2] = String.Format("Время импорта");
-                      sheet.Cells[3, 3] = String.Format("Марка");
-                      sheet.Cells[3, 4] = String.Format("Наименование");
-                      sheet.Cells[3, 5] = String.Format("Описание");
-                      sheet.Cells[3, 6] = String.Format("Тип объекта");
-                      sheet.Cells[3, 7] = String.Format("Подпись");
-                      sheet.Cells[3, 8] = String.Format("KKS");
-                      sheet.Cells[3, 9] = String.Format("PLC_Переменная");
-                      sheet.Cells[3, 10] = String.Format("Контроллер");
-                      sheet.Cells[3, 11] = String.Format("Ресурс/Группа");
-                      sheet.Cells[3, 12] = String.Format("Адрес");
-                      sheet.Cells[3, 13] = String.Format("Шаблон");
-                      sheet.Cells[3, 14] = String.Format("Пер. архивирования");
-                      sheet.Cells[3, 15] = String.Format("Группа событий");
-                      sheet.Cells[3, 16] = String.Format("Классификатор");
-                      sheet.Cells[2, 16] = String.Format("Классификатор");
+                      sheet.Cells[2, 0] = new Cell("№ п/п");
+                      sheet.Cells[2, 1] = new Cell("Время импорта");
+                      sheet.Cells[2, 2] = new Cell("Марка");
+                      sheet.Cells[2, 3] = new Cell("Наименование");
+                      sheet.Cells[2, 4] = new Cell("Описание");
+                      sheet.Cells[2, 5] = new Cell("Тип объекта");
+                      sheet.Cells[2, 6] = new Cell("Подпись");
+                      sheet.Cells[2, 7] = new Cell("KKS");
+                      sheet.Cells[2, 8] = new Cell("PLC_Переменная");
+                      sheet.Cells[2, 9] = new Cell("Контроллер");
+                      sheet.Cells[2, 10] = new Cell("Ресурс/Группа");
+                      sheet.Cells[2, 11] = new Cell("Адрес");
+                      sheet.Cells[2, 12] = new Cell("Шаблон");
+                      sheet.Cells[2, 13] = new Cell("Пер. архивирования");
+                      sheet.Cells[2, 14] = new Cell("Группа событий");
+                      sheet.Cells[2, 15] = new Cell("Классификатор");
+                      sheet.Cells[1, 15] = new Cell("Классификатор");
 
-                      sheet.Cells[4, 3] = String.Format("MARKA");
-                      sheet.Cells[4, 4] = String.Format("NAME");
-                      sheet.Cells[4, 5] = String.Format("DISC");
-                      sheet.Cells[4, 6] = String.Format("OBJTYPENAME");
-                      sheet.Cells[4, 7] = String.Format("OBJSIGN");
-                      sheet.Cells[4, 8] = String.Format("KKS");
-                      sheet.Cells[4, 9] = String.Format("PLC_VARNAME");
-                      sheet.Cells[4, 10] = String.Format("PLC_NAME");
-                      sheet.Cells[4, 11] = String.Format("PLC_GR");
-                      sheet.Cells[4, 12] = String.Format("PLC_ADRESS");
-                      sheet.Cells[4, 13] = String.Format("POUNAME");
-                      sheet.Cells[4, 14] = String.Format("ARH_PER");
-                      sheet.Cells[4, 15] = String.Format("EVKLASSIFIKATORNAME");
-                      sheet.Cells[4, 16] = String.Format("KLASSIFIKATORNAME");
+                      sheet.Cells[3, 2] = new Cell("MARKA");
+                      sheet.Cells[3, 3] = new Cell("NAME");
+                      sheet.Cells[3, 4] = new Cell("DISC");
+                      sheet.Cells[3, 5] = new Cell("OBJTYPENAME");
+                      sheet.Cells[3, 6] = new Cell("OBJSIGN");
+                      sheet.Cells[3, 7] = new Cell("KKS");
+                      sheet.Cells[3, 8] = new Cell("PLC_VARNAME");
+                      sheet.Cells[3, 9] = new Cell("PLC_NAME");
+                      sheet.Cells[3, 10] = new Cell("PLC_GR");
+                      sheet.Cells[3, 11] = new Cell("PLC_ADRESS");
+                      sheet.Cells[3, 12] = new Cell("POUNAME");
+                      sheet.Cells[3, 13] = new Cell("ARH_PER");
+                      sheet.Cells[3, 14] = new Cell("EVKLASSIFIKATORNAME");
+                      sheet.Cells[3, 15] = new Cell("KLASSIFIKATORNAME");
+
+                     // if (!checkBox10.Checked)  // если не выбран пункт применить ко всем, тогда для каждой читаем
+                     // {
+                          bS0 = SaveTablesParamsList[TblCount - 1].S0;
+                          bS100 = SaveTablesParamsList[TblCount - 1].S100;
+                          bM = SaveTablesParamsList[TblCount - 1].M;
+                          bPLC_VARNAME = SaveTablesParamsList[TblCount - 1].PLC_VARNAME;
+                          bED_IZM = SaveTablesParamsList[TblCount - 1].ED_IZM;
+                          bARH_APP = SaveTablesParamsList[TblCount - 1].ARH_APP;
+                          bDISC = SaveTablesParamsList[TblCount - 1].DISC;
+                          bKA = SaveTablesParamsList[TblCount - 1].KA;
+                          bKB = SaveTablesParamsList[TblCount - 1].KB;
+
+                        /*  textBox1.AppendText("\nTblCount = " + (TblCount-1).ToString() + ";\n");
+                          textBox1.AppendText("bS0 = " + bS0.ToString() + ";\n");
+                          textBox1.AppendText("bS0 = " + bS0.ToString() + ";\n");
+                          textBox1.AppendText("bS100 = " + bS100.ToString() + ";\n");
+                          textBox1.AppendText("bM = " + bM.ToString() + ";\n");
+                          textBox1.AppendText("bPLC_VARNAME = " + bPLC_VARNAME.ToString() + ";\n");
+                          textBox1.AppendText("bED_IZM = " + bED_IZM.ToString() + ";\n");
+                          textBox1.AppendText("bARH_APP = " + bARH_APP.ToString() + ";\n");
+                          textBox1.AppendText("bDISC = " + bDISC.ToString() + ";\n");
+                          textBox1.AppendText("bKA = " + bKA.ToString() + ";\n");
+                          textBox1.AppendText("bKB = " + bKB.ToString() + ";\n");*/
+                    //  }
 
                       //заполнение объектами
-                      int TmpCounter = 1;
+                      int TmpCounter = 0;
                       foreach (TeconObject TObj in TeconObjects)
                       {
                           if ((TObj.Index == TblCount) || (SaveWithoutCh))
                           {
-                              sheet.Cells[TmpCounter + 4, 1] = Convert.ToString(TmpCounter);
-                              sheet.Cells[TmpCounter + 4, 3] = TObj.Marka;
-                              sheet.Cells[TmpCounter + 4, 4] = TObj.Name;
-                              sheet.Cells[TmpCounter + 4, 5] = TObj.Disc;
-                              sheet.Cells[TmpCounter + 4, 6] = TObj.ObjTypeName;
-                              sheet.Cells[TmpCounter + 4, 7] = TObj.ObjSign;
-                              sheet.Cells[TmpCounter + 4, 8] = TObj.KKS;
-                              sheet.Cells[TmpCounter + 4, 9] = TObj.PLC_varname;
-                              sheet.Cells[TmpCounter + 4, 10] = TObj.PLC_Name;
-                              sheet.Cells[TmpCounter + 4, 11] = TObj.PLC_GR;
-                              sheet.Cells[TmpCounter + 4, 12] = TObj.PLC_address;
-                              sheet.Cells[TmpCounter + 4, 13] = TObj.POUNAME;
-                              sheet.Cells[TmpCounter + 4, 14] = TObj.Arc_Per;
-                              sheet.Cells[TmpCounter + 4, 15] = TObj.EVKLASSIFIKATORNAME;
-                              sheet.Cells[TmpCounter + 4, 16] = TObj.KLASSIFIKATORNAME;
-
-                              sheet.Cells[TmpCounter + 4, 2] = TObj.Index.ToString();//не забудь убрать потом!
+                              sheet.Cells[TmpCounter + 4, 0] = new Cell(Convert.ToString(TmpCounter));
+                              sheet.Cells[TmpCounter + 4, 2] = new Cell(TObj.Marka);
+                              sheet.Cells[TmpCounter + 4, 3] = new Cell(TObj.Name);
+                              sheet.Cells[TmpCounter + 4, 4] = new Cell(TObj.Disc);
+                              sheet.Cells[TmpCounter + 4, 5] = new Cell(TObj.ObjTypeName);
+                              sheet.Cells[TmpCounter + 4, 6] = new Cell(TObj.ObjSign);
+                              sheet.Cells[TmpCounter + 4, 7] = new Cell(TObj.KKS);
+                              sheet.Cells[TmpCounter + 4, 8] = new Cell(TObj.PLC_varname);
+                              sheet.Cells[TmpCounter + 4, 9] = new Cell(TObj.PLC_Name);
+                              sheet.Cells[TmpCounter + 4, 10] = new Cell(TObj.PLC_GR);
+                              sheet.Cells[TmpCounter + 4, 11] = new Cell(TObj.PLC_address);
+                              sheet.Cells[TmpCounter + 4, 12] = new Cell(TObj.POUNAME);
+                              sheet.Cells[TmpCounter + 4, 13] = new Cell(TObj.Arc_Per);
+                              sheet.Cells[TmpCounter + 4, 14] = new Cell(TObj.EVKLASSIFIKATORNAME);
+                              sheet.Cells[TmpCounter + 4, 15] = new Cell(TObj.KLASSIFIKATORNAME);
 
                               //Цикличное заполнение каналов
                               int k = 1;
                               int t = 0;
 
-
-
                               if (!SaveWithoutCh)
                               {
                                   foreach (TeconObjectChannel ch in TObj.Channels)
                                   {
-                                      // Excel.Range ChNameRange = (Excel.Range)sheet.get_Range(sheet.Cells[2, 16 + k], sheet.Cells[2, 16 + k + 8]).Cells; //sheet.get_Range(sheet.Cells[2, 16+k], sheet.Cells[2, 16+k+8]);
-                                      // ChNameRange.Merge(Type.Missing);
-                                      sheet.Cells[2, 16 + k] = ch.ChannelName;
-                                      Excel.Range c1 = sheet.Cells[2, 16 + k];
-
-                                      if (!checkBox10.Checked)  // если не выбран пункт применить ко всем, тогда для каждой читаем
-                                      {
-                                          bS0 = SaveTablesParamsList[TblCount-1].S0;
-                                          bS100 = SaveTablesParamsList[TblCount-1].S100;
-                                          bM = SaveTablesParamsList[TblCount-1].M;
-                                          bPLC_VARNAME = SaveTablesParamsList[TblCount-1].PLC_VARNAME;
-                                          bED_IZM = SaveTablesParamsList[TblCount-1].ED_IZM;
-                                          bARH_APP = SaveTablesParamsList[TblCount-1].ARH_APP;
-                                          bDISC = SaveTablesParamsList[TblCount-1].DISC;
-                                          bKA = SaveTablesParamsList[TblCount-1].KA;
-                                          bKB = SaveTablesParamsList[TblCount-1].KB;
-                                      }
-
-
-                                      if (bS0) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.S0; sheet.Cells[4, 16 + k] = "S0"; sheet.Cells[3, 16 + k] = "Шкала барогр низ"; k++; }
-                                      if (bS100) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.S100; sheet.Cells[4, 16 + k] = "S100"; sheet.Cells[3, 16 + k] = "Шкала барогр верх"; k++; }
-                                      if (bM) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.M; sheet.Cells[4, 16 + k] = "M"; sheet.Cells[3, 16 + k] = "Округлить до"; k++; }
-                                      if (bPLC_VARNAME) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.PLC_VARNAME; sheet.Cells[4, 16 + k] = "PLC_VARNAME"; sheet.Cells[3, 16 + k] = "PLC переменная"; k++; }
-                                      if (bED_IZM) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.ED_IZM; sheet.Cells[4, 16 + k] = "ED_IZM"; sheet.Cells[3, 16 + k] = "Ед. изм."; k++; }
-                                      if (bARH_APP) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.ARH_APP; sheet.Cells[4, 16 + k] = "ARH_APP"; sheet.Cells[3, 16 + k] = "Апертура арх."; k++; }
-                                      if (bDISC) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.DISC; sheet.Cells[4, 16 + k] = "DISC"; sheet.Cells[3, 16 + k] = "Описание"; k++; }
-                                      if (bKA) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.KA; sheet.Cells[4, 16 + k] = "KA"; sheet.Cells[3, 16 + k] = "Коэф. KA"; k++; }
-                                      if (bKB) { sheet.Cells[TmpCounter + 4, 16 + k] = ch.KB; sheet.Cells[4, 16 + k] = "KB"; sheet.Cells[3, 16 + k] = "Коэф. KB"; k++; }
-
-                                      Excel.Range c2 = sheet.Cells[2, 16 + k - 1];
-                                      sheet.get_Range(c1, c2).Merge();
-
-                                      //    sheet.Cells[TmpCounter + 4, 2] = .ToString();
-
+                                      if (bS0) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S0); sheet.Cells[3, 15 + k] = new Cell("S0"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр низ"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bS100) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S100); sheet.Cells[3, 15 + k] = new Cell("S100"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр верх"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bM) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.M); sheet.Cells[3, 15 + k] = new Cell("M"); sheet.Cells[2, 15 + k] = new Cell("Округлить до"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bPLC_VARNAME) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.PLC_VARNAME); sheet.Cells[3, 15 + k] = new Cell("PLC_VARNAME"); sheet.Cells[2, 15 + k] = new Cell("PLC переменная"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bED_IZM) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ED_IZM); sheet.Cells[3, 15 + k] = new Cell("ED_IZM"); sheet.Cells[2, 15 + k] = new Cell("Ед. изм."); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bARH_APP) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ARH_APP); sheet.Cells[3, 15 + k] = new Cell("ARH_APP"); sheet.Cells[2, 15 + k] = new Cell("Апертура арх."); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bDISC) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.DISC); sheet.Cells[3, 15 + k] = new Cell("DISC"); sheet.Cells[2, 15 + k] = new Cell("Описание"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bKA) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KA); sheet.Cells[3, 15 + k] = new Cell("KA"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KA"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if (bKB) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KB); sheet.Cells[3, 15 + k] = new Cell("KB"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KB"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
                                   }
                               }
-
-                              //textBox1.Clear();
-                              // textBox1.AppendText(TObj.Channels[1].S100 + "\n";
 
                               TmpCounter++;
                           }
                       }
+                      Sheets.Add(sheet);
                   }
 
-                  //Сохренение файла
-                  ex.Application.ActiveWorkbook.SaveAs(SaveXlsPath, Type.Missing,
-                   Type.Missing, Type.Missing, Type.Missing, Type.Missing, Excel.XlSaveAsAccessMode.xlNoChange,
-                   Type.Missing, Type.Missing, Type.Missing, Type.Missing, Type.Missing);
+                  foreach (Worksheet sh in Sheets)
+                  {
+                      workbook.Worksheets.Add(sh);
+                  }
 
-                  //Удаляем приложение (выходим из экселя) - будет висеть в процессах!
-                  ex.Quit();
+                  workbook.Save(SaveXlsPath);
 
                   textBox1.AppendText("Сохранение завершено;\n");
-                  // textBox1.ScrollToCaret();
               }
           }
 
           private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
           {
-              //при нажатии на любой чекбокс эта процедура тоже вызывается.
               int i = comboBox1.SelectedIndex;
-
-              SaveTablesParamsList[i].S0 = bS0;
-              SaveTablesParamsList[i].S100 = bS100;
-              SaveTablesParamsList[i].M = bM;
-              SaveTablesParamsList[i].PLC_VARNAME = bPLC_VARNAME;
-              SaveTablesParamsList[i].ED_IZM = bED_IZM;
-              SaveTablesParamsList[i].ARH_APP = bARH_APP;
-              SaveTablesParamsList[i].DISC = bDISC;
-              SaveTablesParamsList[i].KA = bKA;
-              SaveTablesParamsList[i].KB = bKB;
-
               groupBox2.Text = "Лист" + SaveTablesParamsList[i].TableNum.ToString() + " Тип: " + SaveTablesParamsList[i].TypeName;
-                  
+
+              SaveTablesParamsList[preIndexCombobox].S0 = checkBox1.Checked;
+              SaveTablesParamsList[preIndexCombobox].S100 = checkBox2.Checked;
+              SaveTablesParamsList[preIndexCombobox].M = checkBox3.Checked;
+              SaveTablesParamsList[preIndexCombobox].PLC_VARNAME = checkBox4.Checked;
+              SaveTablesParamsList[preIndexCombobox].ED_IZM = checkBox5.Checked;
+              SaveTablesParamsList[preIndexCombobox].ARH_APP = checkBox6.Checked;
+              SaveTablesParamsList[preIndexCombobox].DISC = checkBox7.Checked;
+              SaveTablesParamsList[preIndexCombobox].KA = checkBox8.Checked;
+              SaveTablesParamsList[preIndexCombobox].KB = checkBox9.Checked;
+              
+              checkBox1.Checked = SaveTablesParamsList[i].S0;
+              checkBox2.Checked = SaveTablesParamsList[i].S100;
+              checkBox3.Checked = SaveTablesParamsList[i].M;
+              checkBox4.Checked = SaveTablesParamsList[i].PLC_VARNAME;
+              checkBox5.Checked = SaveTablesParamsList[i].ED_IZM;
+              checkBox6.Checked = SaveTablesParamsList[i].ARH_APP;
+              checkBox7.Checked = SaveTablesParamsList[i].DISC;
+              checkBox8.Checked = SaveTablesParamsList[i].KA;
+              checkBox9.Checked = SaveTablesParamsList[i].KB;
+
+              //label1.Text = comboBox1.SelectedIndex.ToString();
+              preIndexCombobox = i; 
           }
 
-  
+          private void checkBox11_CheckedChanged(object sender, EventArgs e)
+          {
+              EnabledCheck();
           }
+
+          private void checkBox10_CheckedChanged(object sender, EventArgs e)
+          {
+            //  if (checkBox10.Checked) { ChOptionsToAll(); }
+              EnabledCheck();
+          }
+
+          private void EnabledCheck()
+          {
+
+              if (checkBox11.Checked || !readBD || !readID)
+              {
+                  checkBox1.Enabled = false;
+                  checkBox2.Enabled = false;
+                  checkBox3.Enabled = false;
+                  checkBox4.Enabled = false;
+                  checkBox5.Enabled = false;
+                  checkBox6.Enabled = false;
+                  checkBox7.Enabled = false;
+                  checkBox8.Enabled = false;
+                  checkBox9.Enabled = false;
+                 // checkBox10.Enabled = false;
+              }
+
+              if (!checkBox11.Checked &&  readBD && readID)
+              {
+                  checkBox1.Enabled = true;
+                  checkBox2.Enabled = true;
+                  checkBox3.Enabled = true;
+                  checkBox4.Enabled = true;
+                  checkBox5.Enabled = true;
+                  checkBox6.Enabled = true;
+                  checkBox7.Enabled = true;
+                  checkBox8.Enabled = true;
+                  checkBox9.Enabled = true;
+                 // checkBox10.Enabled = true;
+              }
+
+              if (readBD && readID)
+              {
+                  checkBox11.Enabled = true;
+                  comboBox1.Enabled = true;
+              }
+              else { checkBox11.Enabled = false; comboBox1.Enabled = false; }
+          }
+
+          private void ChOptionsToAll()
+          {
+
+              for (int j = 0; j < comboBox1.Items.Count; j++)
+              {
+                  SaveTablesParamsList[j].S0 = checkBox1.Checked;
+                  SaveTablesParamsList[j].S100 = checkBox2.Checked;
+                  SaveTablesParamsList[j].M = checkBox3.Checked;
+                  SaveTablesParamsList[j].PLC_VARNAME = checkBox4.Checked;
+                  SaveTablesParamsList[j].ED_IZM = checkBox5.Checked;
+                  SaveTablesParamsList[j].ARH_APP = checkBox6.Checked;
+                  SaveTablesParamsList[j].DISC = checkBox7.Checked;
+                  SaveTablesParamsList[j].KA = checkBox8.Checked;
+                  SaveTablesParamsList[j].KB = checkBox9.Checked;
+              }
+          }
+
+          private void checkBox1_CheckedChanged(object sender, EventArgs e)
+          {
+               }
+
+          private void Form1_Load(object sender, EventArgs e)
+          {
+
+          }
+
+          private void button2_Click(object sender, EventArgs e)
+          {
+              ChOptionsToAll();
+          }
+
+      }
     
 }
