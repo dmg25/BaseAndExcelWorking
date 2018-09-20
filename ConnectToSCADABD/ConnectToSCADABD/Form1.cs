@@ -44,6 +44,7 @@ namespace ConnectToSCADABD
     {
         System.Data.DataTable TmpDG = new System.Data.DataTable(); // переменная, чтобы не создавать новые таблицы при новом зарпосе
         System.Data.DataTable dt1 = new System.Data.DataTable(); // таблица с данными из БД
+        System.Data.DataTable dtDef = new System.Data.DataTable(); // таблица, которая собирается из двух.
 
      //   string SQL; // "select * from OBJTYPE "; //Where Speed=@Speed
         string SQLParams; //часть запроса, содержащая перечень нужных строк
@@ -103,6 +104,7 @@ namespace ConnectToSCADABD
             public string PLC_varname;  
             public string PLC_address;
             public List<TeconObjectChannel> Channels = new List<TeconObjectChannel>();
+            public List<TeconObjectChannel> DefChannels = new List<TeconObjectChannel>();
 
             public int ObjTypeID;
             public int Index;
@@ -150,6 +152,8 @@ namespace ConnectToSCADABD
 
         List<TeconObject> TeconObjects = new List<TeconObject>();
         List<TeconObjectChannel> TeconObjectChannels = new List<TeconObjectChannel>();
+        List<TeconObjectChannel> TeconObjectDefChannels = new List<TeconObjectChannel>();
+
         List<ObjTypeChannels> ObjTypeCh = new List<ObjTypeChannels>();
         List<SaveTableParams> SaveTablesParamsList = new List<SaveTableParams>();
 
@@ -174,9 +178,11 @@ namespace ConnectToSCADABD
             foreach (int ID in ObjID)   // для каждого распознанного ID делаем SQL запрос с последующими действиями
             {
                 AddObjChannel(ID);     //добавляем каждый канал каждого тех объекта в список
+                AddObjDefChannel(ID);
                 AddObj(ID);            //делаем список тех объектов, содержащий списки каналов
                 i++;
                 label1.Text = "Прогресс: " + i + "/" + ObjID.Count.ToString();
+               // MessageBox.Show(dtDef.Rows.Count.ToString()); 
                // textBox1.Lines[textBox1.Lines.Length-1] = "Прогресс: " + i + "/" + ObjID.Count.ToString();
                // MessageBox.Show((textBox1.Lines.Length - 1).ToString() + ";" + ObjID.Count.ToString());
             }
@@ -281,11 +287,82 @@ namespace ConnectToSCADABD
                     ID = TmpDG.Rows[i][9].ToString(),
                 };
 
-                // Делаем короткий запрос для получения имени контроллера, ибо в едином запросе такое хз как сделать
+               
                 ConnectToBase("Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.ID = " + objChnl.ID);
                 objChnl.ChannelName = dt1.Rows[0][0].ToString();
              
                 TeconObjectChannels.Add(objChnl);
+            }
+        }
+
+
+
+
+        private void AddObjDefChannel(int ID)
+        {
+            
+            //читаем описание канала, получаем список описаний всех каналов в ISA типе
+            string SQL_disc = "select isaobjfields.disc, isaobjfields.name from isaobjfields where isaobjfields.isaobjid = (select isacardstemplate.tid from isacardstemplate where isacardstemplate.objtypeid = (select cards.objtypeid from cards where cards.id = " + ID + "))";
+            ConnectToBase(SQL_disc);
+            dtDef = dt1; // скопировали первую часть таблицы |disc|name|
+            
+            string SQL_ArhApp = "select OBJTYPEPARAM.isev, OBJTYPEPARAM.name from objtypeparam where objtypeparam.pid = (select cards.objtypeid from cards where cards.id = " + ID + ")";
+            ConnectToBase(SQL_ArhApp);
+            TmpDG = dt1; // вторая часть таблицы |isev|.name|
+
+            //процесс слияния двух таблиц 
+            // берем 1 значение из 1 таблицы, прочесываем вторую таблицу на предмет совпадения имени, при совпадении записываем новый столбец в таблицу
+            dtDef.Columns.Add("ISEV", typeof(String));
+            for (int i = 0; i < dtDef.Rows.Count; i++)
+            {
+                string name1 = dtDef.Rows[i][1].ToString();
+                for (int j = 0; j < TmpDG.Rows.Count; j++)
+                {
+                    string name2 = TmpDG.Rows[j][1].ToString().Remove(0, 1);  // удаляем точку в имени, чтобы сравнивать
+                    if (name1 == name2) { dtDef.Rows[i][2] = TmpDG.Rows[j][0].ToString(); break; } else { dtDef.Rows[i][2] = "lexa"; }
+                }
+            }
+            MessageBox.Show(dtDef.Rows.Count.ToString());
+            for (int i = 0; i < dtDef.Rows.Count; i++)
+            {
+                if (dtDef.Rows[i][2].ToString() == "lexa")
+                {
+                    dtDef.Rows[i].Delete();
+                }
+            }
+
+            MessageBox.Show(dtDef.Rows.Count.ToString());
+
+            for (int i = 0; i < dtDef.Rows.Count; i++)
+            {
+                var objChnl1 = new TeconObjectChannel()
+                {
+                    S0 = "0",
+                    S100 = "100",
+                    M = "1",
+                    PLC_VARNAME = "",
+                    ED_IZM = "",                    
+                    ARH_APP = dtDef.Rows[i]["ISEV"].ToString(),
+                    DISC = dtDef.Rows[i][0].ToString(),
+                    KA = "1",
+                    KB = "0",
+                  //  ID = TmpDG.Rows[i][9].ToString(),
+                };
+
+                if ((Convert.ToInt16(objChnl1.ARH_APP) >= 11) && (Convert.ToInt16(objChnl1.ARH_APP) <= 16))
+                {
+                    objChnl1.ARH_APP = "-1";
+                }
+                else if ((Convert.ToInt16(objChnl1.ARH_APP) >= 1) && (Convert.ToInt16(objChnl1.ARH_APP) <= 6))
+                {
+                    objChnl1.ARH_APP = "0";
+                }
+
+               
+               /* ConnectToBase("Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.ID = " + objChnl.ID);
+                objChnl.ChannelName = dt1.Rows[0][0].ToString();*/
+               // 
+                TeconObjectDefChannels.Add(objChnl1);
             }
         }
 
@@ -313,6 +390,7 @@ namespace ConnectToSCADABD
                 PLC_varname = dt1.Rows[0][12].ToString(),
                 PLC_address = dt1.Rows[0][13].ToString(),
                 Channels = TeconObjectChannels.ToList(),
+                DefChannels = TeconObjectDefChannels.ToList(),
                 ObjTypeID = Convert.ToInt16(dt1.Rows[0][14]),
             };
 
@@ -325,8 +403,16 @@ namespace ConnectToSCADABD
             ConnectToBase("Select CARDS.MARKA from CARDS where CARDS.ID = " + obj.PLC_Name);
             obj.PLC_Name = dt1.Rows[0][0].ToString();
 
-            TeconObjects.Add(obj);
+          /*  for (int i = 0; i < obj.Channels.Count; i++)
+            {
+                if ()
+            }*/
+
+
+
+                TeconObjects.Add(obj);
             TeconObjectChannels.Clear();
+            TeconObjectDefChannels.Clear();
         }
 
         private void FullKlName() 
