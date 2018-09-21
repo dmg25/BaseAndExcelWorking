@@ -69,6 +69,8 @@ namespace ConnectToSCADABD
         List<int> ObjTypeIDUnic = new List<int>(); //массив типов объектов без повторений
         List<string> ObjTypeChannelsList = new List<string>(); //список каналов типа объекта
         List<Worksheet> Sheets = new List<Worksheet>();  // список листов, перезапись не катит, так как они до сохранения висят в памяти.
+        List<HeadExcelCh> HeadExcelChList = new List<HeadExcelCh>(); //лист для шапки каналов
+        
 
         int TablesNum;
         bool readID; // триггер успешно прочитанного файла
@@ -104,7 +106,7 @@ namespace ConnectToSCADABD
             public string PLC_varname;  
             public string PLC_address;
             public List<TeconObjectChannel> Channels = new List<TeconObjectChannel>();
-            public List<TeconObjectChannel> DefChannels = new List<TeconObjectChannel>();
+            public List<TeconObjectChannel> OldChannels = new List<TeconObjectChannel>();
 
             public int ObjTypeID;
             public int Index;
@@ -112,18 +114,35 @@ namespace ConnectToSCADABD
 
         class TeconObjectChannel   // класс с описанием параметров канала объекта
         {
-            public string S0;
-            public string S100;
-            public string M;
-            public string PLC_VARNAME;
-            public string ED_IZM;
-            public string ARH_APP;
-            public string DISC;
-            public string KA;
-            public string KB;
-            public string ID;
+            public string S0 ;
+            public string S100 ;
+            public string M ;
+            public string PLC_VARNAME ;
+            public string ED_IZM ;
+            public string ARH_APP ;
+            public string DISC ;
+            public string KA ;
+            public string KB ;
+            public string ID ;
 
-            public string ChannelName;
+            public string S0name =  "S0";
+            public string S100name =  "S100";
+            public string Mname =  "M";
+            public string PLC_VARNAMEname =  "PLC_VARNAME";
+            public string ED_IZMname =  "ED_IZM";
+            public string ARH_APPname =  "ARH_APP";
+            public string DISCname =  "DISC";
+            public string KAname =  "KA";
+            public string KBname =  "KB";
+
+            public string ChannelName ;
+        }
+
+        class HeadExcelCh
+        {
+            public string ChName;
+            public string ChTitle;
+            public string ChParam;
         }
 
         class ObjTypeChannels   // класс с перечнем каналов каждого типа
@@ -153,6 +172,7 @@ namespace ConnectToSCADABD
         List<TeconObject> TeconObjects = new List<TeconObject>();
         List<TeconObjectChannel> TeconObjectChannels = new List<TeconObjectChannel>();
         List<TeconObjectChannel> TeconObjectDefChannels = new List<TeconObjectChannel>();
+        List<TeconObjectChannel> TeconObjectOldChannels = new List<TeconObjectChannel>();
 
         List<ObjTypeChannels> ObjTypeCh = new List<ObjTypeChannels>();
         List<SaveTableParams> SaveTablesParamsList = new List<SaveTableParams>();
@@ -179,6 +199,7 @@ namespace ConnectToSCADABD
             {
                 AddObjChannel(ID);     //добавляем каждый канал каждого тех объекта в список
                 AddObjDefChannel(ID);
+                CompareChannels();   //сравниваем два списка каналов
                 AddObj(ID);            //делаем список тех объектов, содержащий списки каналов
                 i++;
                 label1.Text = "Прогресс: " + i + "/" + ObjID.Count.ToString();
@@ -295,9 +316,6 @@ namespace ConnectToSCADABD
             }
         }
 
-
-
-
         private void AddObjDefChannel(int ID)
         {
             
@@ -309,60 +327,79 @@ namespace ConnectToSCADABD
             string SQL_ArhApp = "select OBJTYPEPARAM.isev, OBJTYPEPARAM.name from objtypeparam where objtypeparam.pid = (select cards.objtypeid from cards where cards.id = " + ID + ")";
             ConnectToBase(SQL_ArhApp);
             TmpDG = dt1; // вторая часть таблицы |isev|.name|
-
-            //процесс слияния двух таблиц 
-            // берем 1 значение из 1 таблицы, прочесываем вторую таблицу на предмет совпадения имени, при совпадении записываем новый столбец в таблицу
-            dtDef.Columns.Add("ISEV", typeof(String));
-            for (int i = 0; i < dtDef.Rows.Count; i++)
+           //имея список каналов объекта (верхних), на его основе просто создадим другой список
+            foreach (TeconObjectChannel toc in TeconObjectChannels)
             {
-                string name1 = dtDef.Rows[i][1].ToString();
-                for (int j = 0; j < TmpDG.Rows.Count; j++)
-                {
-                    string name2 = TmpDG.Rows[j][1].ToString().Remove(0, 1);  // удаляем точку в имени, чтобы сравнивать
-                    if (name1 == name2) { dtDef.Rows[i][2] = TmpDG.Rows[j][0].ToString(); break; } else { dtDef.Rows[i][2] = "lexa"; }
-                }
-            }
-            MessageBox.Show(dtDef.Rows.Count.ToString());
-            for (int i = 0; i < dtDef.Rows.Count; i++)
-            {
-                if (dtDef.Rows[i][2].ToString() == "lexa")
-                {
-                    dtDef.Rows[i].Delete();
-                }
-            }
+                var objChnl1 = new TeconObjectChannel();
 
-            MessageBox.Show(dtDef.Rows.Count.ToString());
-
-            for (int i = 0; i < dtDef.Rows.Count; i++)
-            {
-                var objChnl1 = new TeconObjectChannel()
+                for (int i = 0; i < TmpDG.Rows.Count; i++)
                 {
-                    S0 = "0",
-                    S100 = "100",
-                    M = "1",
-                    PLC_VARNAME = "",
-                    ED_IZM = "",                    
-                    ARH_APP = dtDef.Rows[i]["ISEV"].ToString(),
-                    DISC = dtDef.Rows[i][0].ToString(),
-                    KA = "1",
-                    KB = "0",
-                  //  ID = TmpDG.Rows[i][9].ToString(),
-                };
-
-                if ((Convert.ToInt16(objChnl1.ARH_APP) >= 11) && (Convert.ToInt16(objChnl1.ARH_APP) <= 16))
-                {
-                    objChnl1.ARH_APP = "-1";
-                }
-                else if ((Convert.ToInt16(objChnl1.ARH_APP) >= 1) && (Convert.ToInt16(objChnl1.ARH_APP) <= 6))
-                {
-                    objChnl1.ARH_APP = "0";
+                    if (toc.ChannelName == TmpDG.Rows[i][1].ToString())
+                    {
+                         if ((Convert.ToInt16(TmpDG.Rows[i][0].ToString()) >= 1) && (Convert.ToInt16(TmpDG.Rows[i][0].ToString()) <= 6))
+                            {
+                                objChnl1.ARH_APP = "0";
+                            }
+                            else
+                            {
+                                objChnl1.ARH_APP = "-1";
+                            }
+                        break;
+                    }
                 }
 
-               
-               /* ConnectToBase("Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.ID = " + objChnl.ID);
-                objChnl.ChannelName = dt1.Rows[0][0].ToString();*/
-               // 
+                string newName = toc.ChannelName;
+                if (newName.Substring(0,1) == ".")
+                    {
+                        newName = toc.ChannelName.Remove(0, 1);
+                      //  MessageBox.Show("Точка обнаружена: " + newName);
+                    }
+
+                for (int i = 0; i < dtDef.Rows.Count; i++)
+                {
+                    if (newName == dtDef.Rows[i][1].ToString())
+                    {
+                        objChnl1.DISC = dtDef.Rows[i][0].ToString();
+                        break;
+                    }                               
+                }
+
+                    objChnl1.S0 = "0";
+                    objChnl1.S100 = "100";
+                    objChnl1.M = "1";
+                    objChnl1.PLC_VARNAME = "";
+                    objChnl1.ED_IZM = "";                    
+                    objChnl1.KA = "1";
+                    objChnl1.KB = "0";
+                    objChnl1.ChannelName = toc.ChannelName;
+
+
                 TeconObjectDefChannels.Add(objChnl1);
+
+             //   MessageBox.Show("Записано Имя:" + objChnl1.ChannelName + "; Апертура:" + objChnl1.ARH_APP + "; Описание:" + objChnl1.DISC);
+            }
+
+        }
+
+        private void CompareChannels()
+        {
+            TeconObjectOldChannels = TeconObjectChannels.ToList();
+
+            for (int i = 0; i < TeconObjectChannels.Count; i++)
+            {
+                int j = 0;  // Если ни одного условия не выполнится, скипнем весь канал сразу
+
+                if (TeconObjectDefChannels[i].DISC != "") { TeconObjectChannels[i].DISC = TeconObjectDefChannels[i].DISC; j++; } else {TeconObjectChannels[i].DISC  = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].ARH_APP != TeconObjectChannels[i].ARH_APP) { TeconObjectChannels[i].ARH_APP = TeconObjectDefChannels[i].ARH_APP; j++; } else { TeconObjectChannels[i].ARH_APP = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].S0 != TeconObjectChannels[i].S0) { TeconObjectChannels[i].S0 = TeconObjectDefChannels[i].S0; j++; } else { TeconObjectChannels[i].S0 = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].S100 != TeconObjectChannels[i].S100) { TeconObjectChannels[i].S100 = TeconObjectDefChannels[i].S100; j++; } else { TeconObjectChannels[i].S100 = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].M != TeconObjectChannels[i].M) { TeconObjectChannels[i].M = TeconObjectDefChannels[i].M; j++; } else { TeconObjectChannels[i].M = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].PLC_VARNAME != TeconObjectChannels[i].PLC_VARNAME) { TeconObjectChannels[i].PLC_VARNAME = TeconObjectDefChannels[i].PLC_VARNAME; j++; } else { TeconObjectChannels[i].PLC_VARNAME = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].ED_IZM != TeconObjectChannels[i].ED_IZM) { TeconObjectChannels[i].ED_IZM = TeconObjectDefChannels[i].ED_IZM; j++; } else { TeconObjectChannels[i].ED_IZM = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].KA != TeconObjectChannels[i].KA) { TeconObjectChannels[i].KA = TeconObjectDefChannels[i].KA; j++; } else { TeconObjectChannels[i].KA = "skipskipskip"; }
+                if (TeconObjectDefChannels[i].KB != TeconObjectChannels[i].KB) { TeconObjectChannels[i].KB = TeconObjectDefChannels[i].KB; j++; } else { TeconObjectChannels[i].KB = "skipskipskip"; }
+
+                //if (j == 0) { TeconObjectChannels[i].ChannelName = "skipskipskip"; }
             }
         }
 
@@ -390,7 +427,7 @@ namespace ConnectToSCADABD
                 PLC_varname = dt1.Rows[0][12].ToString(),
                 PLC_address = dt1.Rows[0][13].ToString(),
                 Channels = TeconObjectChannels.ToList(),
-                DefChannels = TeconObjectDefChannels.ToList(),
+                OldChannels = TeconObjectDefChannels.ToList(),
                 ObjTypeID = Convert.ToInt16(dt1.Rows[0][14]),
             };
 
@@ -402,13 +439,6 @@ namespace ConnectToSCADABD
             // Делаем короткий запрос для получения имени контроллера, ибо в едином запросе такое хз как сделать
             ConnectToBase("Select CARDS.MARKA from CARDS where CARDS.ID = " + obj.PLC_Name);
             obj.PLC_Name = dt1.Rows[0][0].ToString();
-
-          /*  for (int i = 0; i < obj.Channels.Count; i++)
-            {
-                if ()
-            }*/
-
-
 
                 TeconObjects.Add(obj);
             TeconObjectChannels.Clear();
@@ -854,6 +884,178 @@ namespace ConnectToSCADABD
                       sheet.Cells[3, 14] = new Cell("EVKLASSIFIKATORNAME");
                       sheet.Cells[3, 15] = new Cell("KLASSIFIKATORNAME");
 
+                      bool b = true; // первый параметр запишем без условий
+                      //Создадим шапку таблицы и перечень используемых каналов
+                      foreach (TeconObject TObj in TeconObjects) 
+                      {
+                          foreach (TeconObjectChannel Tch in TObj.Channels)
+                          {
+                              if (Tch.S0 != "skipskipskip")
+                              {
+                                 // if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S0", ChTitle = "Шкала барогр. низ" }; HeadExcelChList.Add(obj); b = false; }
+                                  var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S0", ChTitle = "Шкала барогр. низ" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*   foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                  {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "S0"))
+                                      {
+                                          break;
+                                      }
+                                      else 
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S0", ChTitle = "Шкала барогр. низ" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.S100 != "skipskipskip")
+                              {
+                              //    if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S100", ChTitle = "Шкала барогр. верх" }; HeadExcelChList.Add(obj); b = false; }
+                                   var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S100", ChTitle = "Шкала барогр. верх" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*    foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                  {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "S100"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S100", ChTitle = "Шкала барогр. верх" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.M != "skipskipskip")
+                              {
+                                //  if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "M", ChTitle = "Округлить до" }; HeadExcelChList.Add(obj); b = false; }
+                                  var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "M", ChTitle = "Округлить до" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                 {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "M"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "M", ChTitle = "Округлить до" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.PLC_VARNAME != "skipskipskip")
+                              {
+                                  //if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "PLC_VARNAME", ChTitle = "PLC_переменная" }; HeadExcelChList.Add(obj); b = false; }
+                                   var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "PLC_VARNAME", ChTitle = "PLC_переменная" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*  foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                  {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "PLC_VARNAME"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "PLC_VARNAME", ChTitle = "PLC_переменная" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.ED_IZM != "skipskipskip")
+                              {
+                                  //if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "ED_IZM", ChTitle = "Ед. изм." }; HeadExcelChList.Add(obj); b = false; }
+                                  var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "ED_IZM", ChTitle = "Ед. изм." }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*  foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                  {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "ED_IZM"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "ED_IZM", ChTitle = "Ед. изм." }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.DISC != "skipskipskip")
+                              {
+                                 // if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "DISC", ChTitle = "Описание" }; HeadExcelChList.Add(obj); b = false; }
+                                   var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "DISC", ChTitle = "Описание" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*   foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                /*  {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "DISC"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "DISC", ChTitle = "Описание" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.KA != "skipskipskip")
+                              {
+                                  //if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KA", ChTitle = "Коэф. КА" }; HeadExcelChList.Add(obj); b = false; }
+                                   var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KA", ChTitle = "Коэф. КА" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*  foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                               /*   {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "KA"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KA", ChTitle = "Коэф. КА" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+
+                              if (Tch.KB != "skipskipskip")
+                              {
+                                 // if (b) { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KB", ChTitle = "Коэф. КВ" }; HeadExcelChList.Add(obj); b = false; }
+                                   var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KB", ChTitle = "Коэф. КВ" }; HeadExcelChList.Add(obj); b = false; 
+
+                                  /*  foreach (HeadExcelCh hec in HeadExcelChList.ToArray())
+                                 {
+                                      if ((Tch.ChannelName == hec.ChName) && (hec.ChParam == "KB"))
+                                      {
+                                          break;
+                                      }
+                                      else
+                                      {
+                                          var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KB", ChTitle = "Коэф. КВ" }; HeadExcelChList.Add(obj);
+                                      }
+                                  }*/
+                              }
+                          }
+                      }
+
+                      //Запишем шапку в Ecxel
+                      //предварительно уберем из списка повторяющиеся элементы
+                      var distinct = from item in HeadExcelChList
+                                     group item by new { item.ChName, item.ChTitle, item.ChParam } into matches
+                                     select matches.First();
+
+                      HeadExcelChList = new List<HeadExcelCh>(distinct);
+
+                   //   MessageBox.Show(HeadExcelChList.Count.ToString());
+
+                      int k1 = 1;
+                      foreach (HeadExcelCh hec in HeadExcelChList)
+                      {
+                          sheet.Cells[1, 15 + k1] = new Cell(hec.ChName);
+                          sheet.Cells[2, 15 + k1] = new Cell(hec.ChTitle);
+                          sheet.Cells[3, 15 + k1] = new Cell(hec.ChParam);
+                          k1++;
+                      }
+
+
                      // if (!checkBox10.Checked)  // если не выбран пункт применить ко всем, тогда для каждой читаем
                      // {
                           bS0 = SaveTablesParamsList[TblCount - 1].S0;
@@ -903,23 +1105,57 @@ namespace ConnectToSCADABD
 
                               //Цикличное заполнение каналов
                               int k = 1;
+                              int preK = 1;
                               int t = 0;
-
+                              string Channel = "";
+                              string ChannelParam = "";
                               if (!SaveWithoutCh)
+                              {
+                                  while (Convert.ToString(sheet.Cells[1, 15 + k]).Length > 0)
+                                  {
+                                      Channel = Convert.ToString(sheet.Cells[1, 15 + k]);
+                                      ChannelParam = Convert.ToString(sheet.Cells[3, 15 + k]);
+                                     // MessageBox.Show(Convert.ToString(sheet.Cells[1, 15 + k]).Length.ToString() + "; k+15 = " + (k + 15).ToString());
+                                      preK = k;
+                                      for (int i = 0; i < TObj.Channels.Count; i++)
+                                      {
+                                          /*TObj.Channels[i][ChannelParam]*/ /*TObj.Channels[i].S0 == ChannelParam*/
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].S0name == ChannelParam)) { if (TObj.Channels[i].S0 == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].S0); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].S0); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].S100name == ChannelParam)) { if (TObj.Channels[i].S100 == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].S100); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].S100); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].Mname == ChannelParam)) { if (TObj.Channels[i].M == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].M); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].M); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].PLC_VARNAMEname == ChannelParam)) { if (TObj.Channels[i].PLC_VARNAME == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].PLC_VARNAME); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].PLC_VARNAME); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].ED_IZMname == ChannelParam)) { if (TObj.Channels[i].ED_IZM == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].ED_IZM); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].ED_IZM); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].ARH_APPname == ChannelParam)) { if (TObj.Channels[i].ARH_APP == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].ARH_APP); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].ARH_APP); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].DISCname == ChannelParam)) { if (TObj.Channels[i].DISC == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].DISC); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].DISC); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].KAname == ChannelParam)) { if (TObj.Channels[i].KA == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].KA); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].KA); k++; break; } }
+                                          if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].KBname == ChannelParam)) { if (TObj.Channels[i].KB == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].KB); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].KB); k++; break; } }
+
+                                      }
+                                      if (preK == k) { MessageBox.Show("Не найден канал! Параметр" + ChannelParam + "; Канал: " + /*TObj.Channels[i].ChannelName */ "==" + Channel); /*break;*/ }
+
+                                  }
+                              }
+
+
+
+
+
+
+                             /* if (!SaveWithoutCh)
                               {
                                   foreach (TeconObjectChannel ch in TObj.Channels)
                                   {
-                                      if (bS0) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S0); sheet.Cells[3, 15 + k] = new Cell("S0"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр низ"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bS100) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S100); sheet.Cells[3, 15 + k] = new Cell("S100"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр верх"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bM) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.M); sheet.Cells[3, 15 + k] = new Cell("M"); sheet.Cells[2, 15 + k] = new Cell("Округлить до"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bPLC_VARNAME) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.PLC_VARNAME); sheet.Cells[3, 15 + k] = new Cell("PLC_VARNAME"); sheet.Cells[2, 15 + k] = new Cell("PLC переменная"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bED_IZM) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ED_IZM); sheet.Cells[3, 15 + k] = new Cell("ED_IZM"); sheet.Cells[2, 15 + k] = new Cell("Ед. изм."); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bARH_APP) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ARH_APP); sheet.Cells[3, 15 + k] = new Cell("ARH_APP"); sheet.Cells[2, 15 + k] = new Cell("Апертура арх."); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bDISC) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.DISC); sheet.Cells[3, 15 + k] = new Cell("DISC"); sheet.Cells[2, 15 + k] = new Cell("Описание"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bKA) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KA); sheet.Cells[3, 15 + k] = new Cell("KA"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KA"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
-                                      if (bKB) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KB); sheet.Cells[3, 15 + k] = new Cell("KB"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KB"); sheet.Cells[ 1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bS0) && (ch.S0 != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S0); sheet.Cells[3, 15 + k] = new Cell("S0"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр низ"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bS100) && (ch.S100 != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.S100); sheet.Cells[3, 15 + k] = new Cell("S100"); sheet.Cells[2, 15 + k] = new Cell("Шкала барогр верх"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bM) && (ch.M != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.M); sheet.Cells[3, 15 + k] = new Cell("M"); sheet.Cells[2, 15 + k] = new Cell("Округлить до"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bPLC_VARNAME) && (ch.PLC_VARNAME != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.PLC_VARNAME); sheet.Cells[3, 15 + k] = new Cell("PLC_VARNAME"); sheet.Cells[2, 15 + k] = new Cell("PLC переменная"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bED_IZM) && (ch.ED_IZM != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ED_IZM); sheet.Cells[3, 15 + k] = new Cell("ED_IZM"); sheet.Cells[2, 15 + k] = new Cell("Ед. изм."); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bARH_APP) && (ch.ARH_APP != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.ARH_APP); sheet.Cells[3, 15 + k] = new Cell("ARH_APP"); sheet.Cells[2, 15 + k] = new Cell("Апертура арх."); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bDISC) && (ch.DISC != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.DISC); sheet.Cells[3, 15 + k] = new Cell("DISC"); sheet.Cells[2, 15 + k] = new Cell("Описание"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bKA) && (ch.KA != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KA); sheet.Cells[3, 15 + k] = new Cell("KA"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KA"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
+                                      if ((bKB) && (ch.KB != "skipskipskip")) { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(ch.KB); sheet.Cells[3, 15 + k] = new Cell("KB"); sheet.Cells[2, 15 + k] = new Cell("Коэф. KB"); sheet.Cells[1, 15 + k] = new Cell(ch.ChannelName); k++; }
                                   }
-                              }
+                              }*/
 
                               TmpCounter++;
                           }
