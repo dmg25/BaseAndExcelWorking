@@ -16,3 +16,13 @@ C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADA
 C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
 C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
 C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe.config
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.pdb
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csprojResolveAssemblyReference.cache
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
+C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormInitVal.resources

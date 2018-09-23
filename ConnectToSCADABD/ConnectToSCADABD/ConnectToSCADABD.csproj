@@ -58,6 +58,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FormInitVal.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormInitVal.Designer.cs">
+      <DependentUpon>FormInitVal.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ProgramSaveExcel.cs" />
+    <Compile Include="ProgramLoadExcel.cs" />
+    <Compile Include="ProgramReadDB.cs" />
+    <Compile Include="ProgramConnect.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -68,6 +78,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormInitVal.resx">
+      <DependentUpon>FormInitVal.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
