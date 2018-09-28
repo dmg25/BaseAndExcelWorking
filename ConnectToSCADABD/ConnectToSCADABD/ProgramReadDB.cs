@@ -24,6 +24,7 @@ namespace ConnectToSCADABD
             public string ObjID;
             public string Marka;
             public string InitialValue;
+            public string ObjType;
 
         }
 
@@ -94,7 +95,6 @@ namespace ConnectToSCADABD
         public List<int> ObjTypeIDUnic = new List<int>(); //массив типов объектов без повторений
         public List<string> ObjTypeChannelsList = new List<string>(); //список каналов типа объекта
 
-
             public void AddInitValue(int ID)
             {
                 string SQL = "Select ISACARDS.MARKA, ISACARDS.INITIALVALUE from ISACARDS where ISACARDS.CARDSID = " + ID;
@@ -107,6 +107,11 @@ namespace ConnectToSCADABD
                     InitialValue = connect.dt1.Rows[0][1].ToString(), 
                     ObjID = ID.ToString()
                 };
+
+                SQL = "Select OBJTYPE.NAME from CARDS, OBJTYPE where CARDS.ID = " + ID + " and CARDS.OBJTYPEID = OBJTYPE.ID";
+                connect.ConnectToBase(SQL);
+
+                obj.ObjType = connect.dt1.Rows[0][0].ToString();
 
                 InitValues.Add(obj);
             }

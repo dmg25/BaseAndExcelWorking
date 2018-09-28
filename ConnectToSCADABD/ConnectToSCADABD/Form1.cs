@@ -218,6 +218,7 @@ namespace ConnectToSCADABD
                 
                 button1.Enabled = true;
                 button4.Enabled = false;
+                button5.Enabled = true;
                 comboBox1.Items.Clear(); // очистка списка листов
                 savefile.SaveTablesParamsList.Clear();
                 EnabledCheck();            
@@ -358,11 +359,10 @@ namespace ConnectToSCADABD
 
           private void checkBox1_CheckedChanged(object sender, EventArgs e)
           {
-               }
+          }
 
           private void Form1_Load(object sender, EventArgs e)
           {
-
           }
 
           private void button2_Click(object sender, EventArgs e)
@@ -373,7 +373,8 @@ namespace ConnectToSCADABD
           private void button5_Click(object sender, EventArgs e)
           {
               FormInitVal f2 = new FormInitVal();
-              
+              ReadDB.InitValues.Clear();
+              f2.InitValues.Clear();
 
               foreach (int ID in loadfile.ObjID)   // для каждого распознанного ID делаем SQL запрос с последующими действиями
               {

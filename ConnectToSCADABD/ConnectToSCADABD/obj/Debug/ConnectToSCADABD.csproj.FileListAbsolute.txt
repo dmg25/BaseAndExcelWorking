@@ -26,3 +26,4 @@ C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-ma
 C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
 C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
 C:\Users\Erfinder\Downloads\BaseAndExcelWorking-master(3)\BaseAndExcelWorking-master\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormInitVal.resources
+C:\Users\Gazauto\Desktop\программа для импорта\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormInitVal.resources
