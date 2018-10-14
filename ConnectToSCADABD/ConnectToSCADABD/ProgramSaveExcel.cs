@@ -137,6 +137,9 @@ namespace ConnectToSCADABD
                 sheet.Cells[3, 14] = new Cell("EVKLASSIFIKATORNAME");
                 sheet.Cells[3, 15] = new Cell("KLASSIFIKATORNAME");
 
+
+/*
+                HeadExcelChList.Clear();  //на всякий случай очистим шапку из предыдущего листа
                 bool b = true; // первый параметр запишем без условий
                 //Создадим шапку таблицы и перечень используемых каналов
                 foreach (ProgramReadDB.TeconObject TObj in TeconObjects)
@@ -154,6 +157,7 @@ namespace ConnectToSCADABD
                     }
                 }
 
+               
                 //Запишем шапку в Ecxel
                 //предварительно уберем из списка повторяющиеся элементы
                 var distinct = from item in HeadExcelChList
@@ -161,6 +165,7 @@ namespace ConnectToSCADABD
                                select matches.First();
 
                 HeadExcelChList = new List<HeadExcelCh>(distinct);
+
 
                 //   MessageBox.Show(HeadExcelChList.Count.ToString());
 
@@ -171,7 +176,7 @@ namespace ConnectToSCADABD
                     sheet.Cells[2, 15 + k1] = new Cell(hec.ChTitle);
                     sheet.Cells[3, 15 + k1] = new Cell(hec.ChParam);
                     k1++;
-                }
+                }*/
 
 
                 bS0 = SaveTablesParamsList[TblCount - 1].S0;
@@ -206,6 +211,40 @@ namespace ConnectToSCADABD
                         sheet.Cells[TmpCounter + 4, 14] = new Cell(TObj.EVKLASSIFIKATORNAME);
                         sheet.Cells[TmpCounter + 4, 15] = new Cell(TObj.KLASSIFIKATORNAME);
 
+                        //Создадим шапку таблицы и перечень используемых каналов
+                        HeadExcelChList.Clear();  //на всякий случай очистим шапку из предыдущего листа
+                        bool b = true; // первый параметр запишем без условий
+                        if (!SaveWithoutCh)
+                        {
+                            foreach (ProgramReadDB.TeconObjectChannel Tch in TObj.Channels)
+                            {
+                                if (Tch.S0 != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S0", ChTitle = "Шкала барогр. низ" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.S100 != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S100", ChTitle = "Шкала барогр. верх" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.M != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "M", ChTitle = "Округлить до" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.PLC_VARNAME != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "PLC_VARNAME", ChTitle = "PLC_переменная" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.ED_IZM != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "ED_IZM", ChTitle = "Ед. изм." }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.DISC != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "DISC", ChTitle = "Описание" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.KA != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KA", ChTitle = "Коэф. КА" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.KB != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KB", ChTitle = "Коэф. КВ" }; HeadExcelChList.Add(obj); b = false; }
+                            }
+                            //Запишем шапку в Ecxel
+                            //предварительно уберем из списка повторяющиеся элементы
+                            var distinct = from item in HeadExcelChList
+                                           group item by new { item.ChName, item.ChTitle, item.ChParam } into matches
+                                           select matches.First();
+
+                            HeadExcelChList = new List<HeadExcelCh>(distinct);
+
+                            int k1 = 1;
+                            foreach (HeadExcelCh hec in HeadExcelChList)
+                            {
+                                sheet.Cells[1, 15 + k1] = new Cell(hec.ChName);
+                                sheet.Cells[2, 15 + k1] = new Cell(hec.ChTitle);
+                                sheet.Cells[3, 15 + k1] = new Cell(hec.ChParam);
+                                k1++;
+                            }
+                        }
+
                         //Цикличное заполнение каналов
                         int k = 1;
                         int preK = 1;
@@ -214,7 +253,7 @@ namespace ConnectToSCADABD
                         string ChannelParam = "";
                         if (!SaveWithoutCh)
                         {
-                            while (Convert.ToString(sheet.Cells[1, 15 + k]).Length > 0)
+                            while (Convert.ToString(sheet.Cells[1, 15 + k]).Length > 0)  // если k не прибавится, будет бесконечный цикл!
                             {
                                 Channel = Convert.ToString(sheet.Cells[1, 15 + k]);
                                 ChannelParam = Convert.ToString(sheet.Cells[3, 15 + k]);
@@ -235,7 +274,7 @@ namespace ConnectToSCADABD
                                     if ((TObj.Channels[i].ChannelName == Channel) && (TObj.Channels[i].KBname == ChannelParam)) { if (TObj.Channels[i].KB == "skipskipskip") { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.OldChannels[i].KB); k++; break; } else { sheet.Cells[TmpCounter + 4, 15 + k] = new Cell(TObj.Channels[i].KB); k++; break; } }
 
                                 }
-                                if (preK == k) { MessageBox.Show("Не найден канал! Параметр" + ChannelParam + "; Канал: " + /*TObj.Channels[i].ChannelName */ "==" + Channel); /*break;*/ }
+                                if (preK == k) { MessageBox.Show("Не найден канал! Параметр" + ChannelParam + "; Канал: " + /*TObj.Channels[i].ChannelName */ "==" + Channel + "тип: " +TObj.ObjTypeName); /*break;*/ k++; }
 
                             }
                         }

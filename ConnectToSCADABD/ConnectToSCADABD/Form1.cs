@@ -28,6 +28,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Globalization;
+using System.Threading;
 
 using FirebirdSql.Data.FirebirdClient;
 
@@ -45,7 +46,7 @@ namespace ConnectToSCADABD
         ProgramReadDB ReadDB = new ProgramReadDB();
         ProgramLoadExcel loadfile = new ProgramLoadExcel();
         ProgramSaveExcel savefile = new ProgramSaveExcel();
-        string BaseAddr; //адрес базы
+        public string BaseAddr; //адрес базы
         public string ConStr;
 
         bool FirstIter; // переменная для создания sql запроса, убирающая одну запятую*/
@@ -59,52 +60,72 @@ namespace ConnectToSCADABD
 
         public Form1()
         {
+            
             InitializeComponent();
         }
 
+       
         private void button1_Click(object sender, EventArgs e)
         {
-           
             readBD = false;
-            BaseAddr = textBox2.Text;
-            ConStr = "character set=WIN1251;initial catalog=" + BaseAddr + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
+
+            ConStr = "character set=WIN1251;initial catalog=" + BaseAddr + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, в данный момент не активна
 
             ReadDB.TeconObjectChannels.Clear(); // очистка предыдущего поиска
             ReadDB.TeconObjects.Clear();
             ReadDB.ObjTypeID.Clear();
+            ReadDB.ObjTypeChannelsMatched.Clear();
             preIndexCombobox = 0;
-            textBox1.AppendText( "Начат сбор данных из БД;\n");
+            textBox1.AppendText("Начат сбор данных из БД;\n");
 
             // textBox1.ScrollToCaret();
-            int i=0;
+            FormProcess f = new FormProcess();
+            f.progressBar1.Minimum = 0;
+            f.progressBar1.Maximum = loadfile.ObjID.Count;
+            f.Location = new Point(170, 400);
+            f.Show();
+            Thread.Sleep(10); 
+            Enabled = false; // относится к форме
+
+            int i = 0;
             foreach (int ID in loadfile.ObjID)   // для каждого распознанного ID делаем SQL запрос с последующими действиями
             {
                 ReadDB.AddObjChannel(ID);     //добавляем каждый канал каждого тех объекта в список
-                ReadDB.AddObjDefChannel(ID);
+                ReadDB.AddObjDefChannel(ID);  //затем читаем дефолтные свойства каналов
                 ReadDB.CompareChannels();   //сравниваем два списка каналов
                 ReadDB.AddObj(ID);            //делаем список тех объектов, содержащий списки каналов
                 i++;
-                label1.Text = "Прогресс: " + i + "/" + loadfile.ObjID.Count.ToString();
+                f.progressBar1.Value = i;
+                // label1.Text = "Прогресс: " + i + "/" + loadfile.ObjID.Count.ToString();
             }
+            f.Close();
+            Enabled = true;
+            TopMost = true;
+            TopMost = false; // вытаскиваем на передний план
+
             ReadDB.FullKlName(); // находим полный путь для классификатора
-            textBox1.AppendText( "Прочитаны данные из БД;\n");
+            textBox1.AppendText("Прочитаны данные из БД;\n");
             ReadDB.FindTypes();           //разбираем объекты на типы, ищем типы с одинаковыми каналами, присваиваем индексы
+            ReadDB.RepeatChNameAlarm(); //ищем повторяющиеся имена каналов у типов.
             textBox1.AppendText("Данные обработаны;\n");
             ShowData();            //показываем выбранные данные в таблице на форме
             textBox1.AppendText("Данные готовы к сохранению;\n");
             // textBox1.ScrollToCaret();
             readBD = true;
-            EnabledCheck();
-            ChOptionsToAll();
+        //    EnabledCheck();
+            ChOptionsToAll(); //???
 
-            button4.Enabled = true;
+            button1.BackColor = Color.LightGreen;
+            //разблокировать кнопки дальше               
+            button4.Enabled = true; button4.BackColor = SystemColors.Control;
+            button5.Enabled = true; button5.BackColor = SystemColors.Control; 
+
+          
         }
-
- 
 
         private void ShowData()
     {
-
+/*
 //--------------------Отображение собранной из БД информации-----------------------------------------------------------------------------------------------------------------------------
            Table2.ColumnCount = 14; //без указания количества столбцов не сработает
            Table2.RowCount = ReadDB.TeconObjects.Count + 1;
@@ -143,7 +164,7 @@ namespace ConnectToSCADABD
                 Table2[ 12, TmpCounter].Value = TObj.PLC_varname;
                 Table2[ 13, TmpCounter].Value = TObj.PLC_address;
                 TmpCounter++;
-            }
+            }*/
 
 //блок вывода статистики по собранной информации---------------------------------------------------------------------------------------------
 
@@ -176,7 +197,7 @@ namespace ConnectToSCADABD
                   if (to.Index == i) { p++; s = to.ObjTypeName; }
               }
               textBox1.AppendText("Лист" + i.ToString() + ": " + p.ToString() + ", "+s + ";\n");
-              comboBox1.Items.Add("Лист" + i.ToString() + "; " + s);
+             // comboBox1.Items.Add("Лист" + i.ToString() + "; " + s);
                var STP = new ProgramSaveExcel.SaveTableParams()
                   {
                        TableNum = i,
@@ -184,7 +205,7 @@ namespace ConnectToSCADABD
                   };
                savefile.SaveTablesParamsList.Add(STP);
           }
-          comboBox1.SelectedIndex = 0;
+         // comboBox1.SelectedIndex = 0;
           //label1.Text = SaveTablesParamsList.Count.ToString();
           // textBox1.ScrollToCaret();
         }
@@ -215,13 +236,17 @@ namespace ConnectToSCADABD
                 textBox1.AppendText("ID объектов считаны (" + loadfile.ObjID.Count.ToString() + ")шт.;\n");
                 readID = true;
                 readBD = false;
+
+                button3.BackColor = Color.LightGreen;
+                //разблокировать кнопки дальше               
+                button1.Enabled = true; button1.BackColor = SystemColors.Control;
+                button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                button5.Enabled = false; button5.BackColor = SystemColors.Control; 
                 
-                button1.Enabled = true;
-                button4.Enabled = false;
-                button5.Enabled = true;
-                comboBox1.Items.Clear(); // очистка списка листов
+
+            //    comboBox1.Items.Clear(); // очистка списка листов
                 savefile.SaveTablesParamsList.Clear();
-                EnabledCheck();            
+           //     EnabledCheck();            
              }
           }
 
@@ -229,7 +254,7 @@ namespace ConnectToSCADABD
           private void button4_Click(object sender, EventArgs e)
           {
               //То что выбрано из параметров на момент нажатия кнопки сохранения
-              int j = comboBox1.SelectedIndex;
+             /* int j = comboBox1.SelectedIndex;
               savefile.SaveTablesParamsList[j].S0 = checkBox1.Checked;
               savefile.SaveTablesParamsList[j].S100 = checkBox2.Checked;
               savefile.SaveTablesParamsList[j].M = checkBox3.Checked;
@@ -238,7 +263,7 @@ namespace ConnectToSCADABD
               savefile.SaveTablesParamsList[j].ARH_APP = checkBox6.Checked;
               savefile.SaveTablesParamsList[j].DISC = checkBox7.Checked;
               savefile.SaveTablesParamsList[j].KA = checkBox8.Checked;
-              savefile.SaveTablesParamsList[j].KB = checkBox9.Checked;
+              savefile.SaveTablesParamsList[j].KB = checkBox9.Checked;*/
 
               savefile.Sheets.Clear();
               bool SaveWithoutCh = false;
@@ -262,12 +287,16 @@ namespace ConnectToSCADABD
                   textBox1.AppendText("Начат процесс сохранения;\n");
                   savefile.SaveFileExcel(saveFileDialog1.FileName, checkBox11.Checked, ReadDB.TablesNum, ReadDB.TeconObjects);
                   textBox1.AppendText("Сохранение завершено;\n");
+                  button4.BackColor = Color.LightGreen;
               }
+
+              
+             
           }
 
           private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
           {
-              int i = comboBox1.SelectedIndex;
+             /* int i = comboBox1.SelectedIndex;
               groupBox2.Text = "Лист" + savefile.SaveTablesParamsList[i].TableNum.ToString() + " Тип: " + savefile.SaveTablesParamsList[i].TypeName;
 
               savefile.SaveTablesParamsList[preIndexCombobox].S0 = checkBox1.Checked;
@@ -290,7 +319,7 @@ namespace ConnectToSCADABD
               checkBox8.Checked = savefile.SaveTablesParamsList[i].KA;
               checkBox9.Checked = savefile.SaveTablesParamsList[i].KB;
 
-              preIndexCombobox = i; 
+              preIndexCombobox = i; */
           }
 
           private void checkBox11_CheckedChanged(object sender, EventArgs e)
@@ -305,7 +334,7 @@ namespace ConnectToSCADABD
 
           private void EnabledCheck()
           {
-              if (checkBox11.Checked || !readBD || !readID)
+             /* if (checkBox11.Checked || !readBD || !readID)
               {
                   checkBox1.Enabled = false;
                   checkBox2.Enabled = false;
@@ -338,12 +367,12 @@ namespace ConnectToSCADABD
                   checkBox11.Enabled = true;
                   comboBox1.Enabled = true;
               }
-              else { checkBox11.Enabled = false; comboBox1.Enabled = false; }
+              else { checkBox11.Enabled = false; comboBox1.Enabled = false; }*/
           }
 
           private void ChOptionsToAll()
           {
-              for (int j = 0; j < comboBox1.Items.Count; j++)
+             /* for (int j = 0; j < comboBox1.Items.Count; j++)
               {
                   savefile.SaveTablesParamsList[j].S0 = checkBox1.Checked;
                   savefile.SaveTablesParamsList[j].S100 = checkBox2.Checked;
@@ -354,7 +383,7 @@ namespace ConnectToSCADABD
                   savefile.SaveTablesParamsList[j].DISC = checkBox7.Checked;
                   savefile.SaveTablesParamsList[j].KA = checkBox8.Checked;
                   savefile.SaveTablesParamsList[j].KB = checkBox9.Checked;
-              }
+              }*/
           }
 
           private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -373,6 +402,7 @@ namespace ConnectToSCADABD
           private void button5_Click(object sender, EventArgs e)
           {
               FormInitVal f2 = new FormInitVal();
+              f2.BaseAddr = BaseAddr;
               ReadDB.InitValues.Clear();
               f2.InitValues.Clear();
 
@@ -386,8 +416,41 @@ namespace ConnectToSCADABD
               {
                   f2.InitValues.Add(iv);
               }
-              f2.Show();   
+              f2.Show();
+
+              button5.BackColor = Color.LightGreen;
+             
 
           }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            openDB.Filter = "Firebird DB files (*.GDB)|*.GDB";
+            if (openDB.ShowDialog() == DialogResult.OK)
+            {
+                BaseAddr = openDB.FileName;
+                //закрасить цветом кнопку
+                button6.BackColor = Color.LightGreen;
+                //разблокировать кнопки дальше               
+                button3.Enabled = true;  button3.BackColor = SystemColors.Control;
+                button1.Enabled = false; button1.BackColor = SystemColors.Control;
+                button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                button5.Enabled = false; button5.BackColor = SystemColors.Control;
+                ReadDB.BaseAddr = BaseAddr; //кидаем адрес базы в readBase
+
+            }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+
+        }
       }
 }
+
+            

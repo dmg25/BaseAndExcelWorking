@@ -16,10 +16,10 @@ namespace ConnectToSCADABD
 
         public DataTable dt1 = new System.Data.DataTable(); // таблица с данными из БД
 
-        public void ConnectToBase(string SQL )
+        public void ConnectToBase(string SQL, string BaseAddr )
         {
             Form1 f = new Form1();  //тащим данные из формы
-            string ConStr = "character set=WIN1251;initial catalog=" + f.textBox2.Text + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
+            string ConStr = "character set=WIN1251;initial catalog=" + BaseAddr + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
 
             // Строка подключения
             using (FbConnection fbc = new FbConnection(ConStr))   // используем Using для последующего высвобождения ресурсов, должно быть оптимальнее
@@ -74,10 +74,10 @@ namespace ConnectToSCADABD
             }
         }
 
-        public void WriteToBase(string SQL)
+        public void WriteToBase(string SQL, string BaseAddr)
         {
             Form1 f = new Form1();  //тащим данные из формы
-            string ConStr = "character set=WIN1251;initial catalog=" + f.textBox2.Text + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
+            string ConStr = "character set=WIN1251;initial catalog=" + BaseAddr + ";user id=SYSDBA;password=masterkey"; // наша строка подключения, сделать её изменяемой!!!
 
             // Строка подключения
             using (FbConnection fbc = new FbConnection(ConStr))   // используем Using для последующего высвобождения ресурсов, должно быть оптимальнее

@@ -13,6 +13,7 @@ namespace ConnectToSCADABD
     public partial class FormInitVal : Form
     {
         string condition;
+        public string BaseAddr;
         bool edit = false;
 
         public List<string> ObjTypeName = new List<string>(); //массив типов объектов
@@ -38,7 +39,7 @@ namespace ConnectToSCADABD
                     string SQL = "Update ISACARDS set INITIALVALUE = '" + textBox1.Text + "' where CARDSID =" + list.ObjID;
 
                     ProgramConnect connect = new ProgramConnect();
-                    connect.WriteToBase(SQL);
+                    connect.WriteToBase(SQL, BaseAddr);
                 }
 
                 MessageBox.Show("Данные записаны");
@@ -78,6 +79,8 @@ namespace ConnectToSCADABD
             {
                 listBox1.Items.Add(list.Marka);
             }
+
+            listBox1.SetSelected(0, true); // выбираем первый элемент по дефолту
             //----------------------------------------------------------------------------------------------------
         }
 

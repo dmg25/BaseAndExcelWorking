@@ -17,6 +17,7 @@ namespace ConnectToSCADABD
         public string SQL_CARDPARAMS; //запрос параметров каналов объекта
         public string SQL_OBJTYPES; //запрос параметров каналов объекта
         public int TablesNum;  // хранит количество будущих таблиц
+        public string BaseAddr; // адрес базы, пишем его сюда из главной формы
 
 
         public class InitValue  // класс объекта с значением его иса объекта
@@ -94,12 +95,13 @@ namespace ConnectToSCADABD
         public List<int> ObjTypeID = new List<int>(); //массив типов объектов
         public List<int> ObjTypeIDUnic = new List<int>(); //массив типов объектов без повторений
         public List<string> ObjTypeChannelsList = new List<string>(); //список каналов типа объекта
+        public List<string> ObjTypeChannelsMatched = new List<string>(); //список каналов типа объекта
 
             public void AddInitValue(int ID)
             {
                 string SQL = "Select ISACARDS.MARKA, ISACARDS.INITIALVALUE from ISACARDS where ISACARDS.CARDSID = " + ID;
                 ProgramConnect connect = new ProgramConnect();
-                connect.ConnectToBase(SQL);
+                connect.ConnectToBase(SQL, BaseAddr);
 
                 var obj = new InitValue()
                 {
@@ -109,7 +111,7 @@ namespace ConnectToSCADABD
                 };
 
                 SQL = "Select OBJTYPE.NAME from CARDS, OBJTYPE where CARDS.ID = " + ID + " and CARDS.OBJTYPEID = OBJTYPE.ID";
-                connect.ConnectToBase(SQL);
+                connect.ConnectToBase(SQL, BaseAddr);
 
                 obj.ObjType = connect.dt1.Rows[0][0].ToString();
 
@@ -129,7 +131,7 @@ namespace ConnectToSCADABD
             {
                 SQL_CARDPARAMS = "Select CARDPARAMS.S0, CARDPARAMS.S100, CARDPARAMS.M, CARDPARAMS.PLC_VARNAME, CARDPARAMS.ED_IZM, CARDPARAMS.ARH_APP, CARDPARAMS.DISC, CARDPARAMS.KA, CARDPARAMS.KB, CARDPARAMS.OBJTYPEPARAMID from CARDPARAMS where CARDPARAMS.CARDID = " + ID;
                 ProgramConnect connect = new ProgramConnect();
-                connect.ConnectToBase(SQL_CARDPARAMS); 
+                connect.ConnectToBase(SQL_CARDPARAMS, BaseAddr); 
 
                 TmpDG = connect.dt1;
 
@@ -146,29 +148,86 @@ namespace ConnectToSCADABD
                         DISC = TmpDG.Rows[i][6].ToString(),
                         KA = TmpDG.Rows[i][7].ToString(),
                         KB = TmpDG.Rows[i][8].ToString(),
-                        ID = TmpDG.Rows[i][9].ToString(),
+                        ID = TmpDG.Rows[i][9].ToString(),  //OBJPARAMID
                     };
 
-                    connect.ConnectToBase("Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.ID = " + objChnl.ID);
+                    connect.ConnectToBase("Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.ID = " + objChnl.ID, BaseAddr);
                     objChnl.ChannelName = connect.dt1.Rows[0][0].ToString();
                     TeconObjectChannels.Add(objChnl);
                 }
+
             }
 
             public void AddObjDefChannel(int ID)
             {
-                string SQL_disc = "select isaobjfields.disc, isaobjfields.name from isaobjfields where isaobjfields.isaobjid = (select isacardstemplate.tid from isacardstemplate where isacardstemplate.objtypeid = (select cards.objtypeid from cards where cards.id = " + ID + "))";
+                 
+              /* 1. пробегаем по листу с текущими каналами и составляем новый лист с objparamid 
+               * 2. параллельно составляем строку с айдишниками и делаем ОР
+               * 3. делаем запрос со всеми айдишниками и вываливаем в таблицу
+               * 4. пробегаем по таблице и при совпадении айдишника КОТОРЫЙ ТОЖЕ В НЕЙ ЕСТЬ записываем данные в дефлист
+               * 5. получили дефлист с теми же индексами, что и лист текущих каналов
+               * 
+               * */
+                string OR = "";
+                bool firstIter = true;
+                for (int i = 0; i < TeconObjectChannels.Count; i++)   // объединили все id в один запрос
+                {
+                    if (firstIter) { OR = OR + " objtypeparam.id = " + TeconObjectChannels[i].ID.ToString(); firstIter = false; }
+                    else { OR = OR + " or objtypeparam.id = " + TeconObjectChannels[i].ID.ToString(); }  
+                }
+
+                string SQL_disc = "select OBJTYPEPARAM.disc, OBJTYPEPARAM.isev, OBJTYPEPARAM.id from OBJTYPEPARAM where" + OR;
                 ProgramConnect connect = new ProgramConnect();
-                connect.ConnectToBase(SQL_disc);
+                connect.ConnectToBase(SQL_disc, BaseAddr);        
 
-                dtDef = connect.dt1; // скопировали первую часть таблицы |disc|name|
+                dtDef = connect.dt1; 
 
-                string SQL_ArhApp = "select OBJTYPEPARAM.isev, OBJTYPEPARAM.name from objtypeparam where objtypeparam.pid = (select cards.objtypeid from cards where cards.id = " + ID + ")";
+        /*        string SQL_ArhApp = "select OBJTYPEPARAM.isev, OBJTYPEPARAM.name from objtypeparam where objtypeparam.pid = (select cards.objtypeid from cards where cards.id = " + ID + ")";
                 connect.ConnectToBase(SQL_ArhApp);
-                TmpDG = connect.dt1; // вторая часть таблицы |isev|.name|
+                TmpDG = connect.dt1; // вторая часть таблицы |isev|.name|*/
 
                 //имея список каналов объекта (верхних), на его основе просто создадим другой список
+
                 foreach (TeconObjectChannel toc in TeconObjectChannels)
+                {
+                    var objChnl1 = new TeconObjectChannel();
+
+                    for (int i = 0; i < dtDef.Rows.Count; i++)
+                    {
+                        if (toc.ID == dtDef.Rows[i][2].ToString())
+                        {
+                            if ((Convert.ToInt16(dtDef.Rows[i][1].ToString()) >= 1) && (Convert.ToInt16(dtDef.Rows[i][1].ToString()) <= 6))
+                            {
+                                objChnl1.ARH_APP = "0";
+                            }
+                            else
+                            {
+                                objChnl1.ARH_APP = "-1";
+                            }
+
+                            objChnl1.DISC = dtDef.Rows[i][0].ToString();
+
+                            break;
+                        }
+                    }
+
+                    objChnl1.S0 = "0";
+                    objChnl1.S100 = "100";
+                    objChnl1.M = "1";
+                    objChnl1.PLC_VARNAME = "";
+                    objChnl1.ED_IZM = "";
+                    objChnl1.KA = "1";
+                    objChnl1.KB = "0";
+                    objChnl1.ChannelName = toc.ChannelName;
+
+                    TeconObjectDefChannels.Add(objChnl1);
+                }
+
+
+
+
+
+              /*  foreach (TeconObjectChannel toc in TeconObjectChannels)
                 {
                     var objChnl1 = new TeconObjectChannel();
 
@@ -187,8 +246,7 @@ namespace ConnectToSCADABD
                             break;
                         }
                     }
-
-                    string newName = toc.ChannelName;
+                      string newName = toc.ChannelName;
                     if (newName.Substring(0, 1) == ".")
                     {
                         newName = toc.ChannelName.Remove(0, 1);
@@ -213,8 +271,25 @@ namespace ConnectToSCADABD
                     objChnl1.ChannelName = toc.ChannelName;
 
                     TeconObjectDefChannels.Add(objChnl1);
+                }*/
+            }
+
+            public void RepeatChNameAlarm()
+            {
+                if (ObjTypeChannelsMatched.Count > 0)
+                {
+                    List<string> ObjTypeChannelsMatchedDistinct = new List<string>();
+                    ObjTypeChannelsMatchedDistinct = ObjTypeChannelsMatched.Distinct().ToList();
+                    string str = "";
+                    for (int i = 0; i < ObjTypeChannelsMatchedDistinct.Count; i++)
+                    {
+                        str = str + "'"+ObjTypeChannelsMatchedDistinct[i]+"' ; " ;                   
+                    }
+
+                    MessageBox.Show("Обнаружены одинаковые каналы у следующих типов: '" + str + "\n Повторяющиеся каналы будут записаны в файл некорректно(только 1 экз.)! \n Переименование канала в библиотеке типов решит проблему.", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
+        
 
             public void CompareChannels()
             {
@@ -229,10 +304,20 @@ namespace ConnectToSCADABD
                     if (TeconObjectDefChannels[i].S0 != TeconObjectChannels[i].S0) { TeconObjectChannels[i].S0 = TeconObjectDefChannels[i].S0; j++; } else { TeconObjectChannels[i].S0 = "skipskipskip"; }
                     if (TeconObjectDefChannels[i].S100 != TeconObjectChannels[i].S100) { TeconObjectChannels[i].S100 = TeconObjectDefChannels[i].S100; j++; } else { TeconObjectChannels[i].S100 = "skipskipskip"; }
                     if (TeconObjectDefChannels[i].M != TeconObjectChannels[i].M) { TeconObjectChannels[i].M = TeconObjectDefChannels[i].M; j++; } else { TeconObjectChannels[i].M = "skipskipskip"; }
-                    if (TeconObjectDefChannels[i].PLC_VARNAME != TeconObjectChannels[i].PLC_VARNAME) { TeconObjectChannels[i].PLC_VARNAME = TeconObjectDefChannels[i].PLC_VARNAME; j++; } else { TeconObjectChannels[i].PLC_VARNAME = "skipskipskip"; }
-                    if (TeconObjectDefChannels[i].ED_IZM != TeconObjectChannels[i].ED_IZM) { TeconObjectChannels[i].ED_IZM = TeconObjectDefChannels[i].ED_IZM; j++; } else { TeconObjectChannels[i].ED_IZM = "skipskipskip"; }
+                    if (TeconObjectDefChannels[i].PLC_VARNAME != TeconObjectChannels[i].PLC_VARNAME) { TeconObjectChannels[i].PLC_VARNAME = TeconObjectDefChannels[i].PLC_VARNAME; j++; } else { TeconObjectChannels[i].PLC_VARNAME = "skipskipskip"; }                   
                     if (TeconObjectDefChannels[i].KA != TeconObjectChannels[i].KA) { TeconObjectChannels[i].KA = TeconObjectDefChannels[i].KA; j++; } else { TeconObjectChannels[i].KA = "skipskipskip"; }
                     if (TeconObjectDefChannels[i].KB != TeconObjectChannels[i].KB) { TeconObjectChannels[i].KB = TeconObjectDefChannels[i].KB; j++; } else { TeconObjectChannels[i].KB = "skipskipskip"; }
+                    if (TeconObjectChannels[i].ED_IZM.Length != 0)
+                    { //исключаем случай, когда в поле откуда-то берутся пробелы, именно в единицах измерения.
+                        string s = TeconObjectChannels[i].ED_IZM;
+                        for (int l = 0; l < s.Length; l++)
+                        {
+                            if (s[l].ToString() != " ") { j++; break; }
+                            if (s.Length - 1 == l) { TeconObjectChannels[i].ED_IZM = "skipskipskip"; }
+                        }
+                    }
+                    else { TeconObjectChannels[i].ED_IZM = "skipskipskip"; }
+                    
                 }
             }
 
@@ -240,7 +325,7 @@ namespace ConnectToSCADABD
             {
                 SQL_CARDS = "Select CARDS.MARKA, CARDS.NAME, CARDS.DISC, OBJTYPE.NAME, CARDS.ARH_PER, CARDS.OBJSIGN, CARDS.PLC_ID, CARDS.PLC_GR, EVKLASSIFIKATOR.NAME, CARDS.KKS, ISAOBJ.NAME, KLASSIFIKATOR.NAME, CARDS.PLC_VARNAME, CARDS.PLC_ADRESS, CARDS.OBJTYPEID from CARDS, OBJTYPE, KLASSIFIKATOR, EVKLASSIFIKATOR, ISAOBJ, RESOURCES where CARDS.ID = " + ID + " and CARDS.OBJTYPEID = OBJTYPE.ID and CARDS.EVKLID = EVKLASSIFIKATOR.ID and CARDS.TEMPLATEID = ISAOBJ.ID and CARDS.KLID = KLASSIFIKATOR.ID";
                 ProgramConnect connect = new ProgramConnect();
-                connect.ConnectToBase(SQL_CARDS);
+                connect.ConnectToBase(SQL_CARDS, BaseAddr);
 
                 //---------------------------Заполняем параметры объекта---------------------------------------------------------------                 
                 var obj = new TeconObject()
@@ -268,9 +353,35 @@ namespace ConnectToSCADABD
                 ObjTypeID.Add(Convert.ToInt16(connect.dt1.Rows[0][14])); // заполняем список типами объектов
 
                 // Делаем короткий запрос для получения имени контроллера, ибо в едином запросе такое хз как сделать
-                connect.ConnectToBase("Select CARDS.MARKA from CARDS where CARDS.ID = " + obj.PLC_Name);
+                connect.ConnectToBase("Select CARDS.MARKA from CARDS where CARDS.ID = " + obj.PLC_Name, BaseAddr);
                 obj.PLC_Name = connect.dt1.Rows[0][0].ToString();
 
+//---------------------проверяем, нет ли повторяющихся имен каналов, создаем список--------------------------------------------------------------------------------
+
+
+                List<string> ChannelNames = new List<string>();
+                List<string> ChannelNamesDst = new List<string>();
+                foreach (ProgramReadDB.TeconObjectChannel to in TeconObjectChannels)
+                {
+                    ChannelNames.Add(to.ChannelName);
+                }
+
+                ChannelNamesDst = ChannelNames.Distinct().ToList();
+                if (ChannelNamesDst.Count != ChannelNames.Count)
+                {
+                    ObjTypeChannelsMatched.Add(obj.ObjTypeName);
+                 //   MessageBox.Show("Обнаружены повторяющиеся имена каналов у типа: '");
+                }
+
+                /*
+                List<ProgramReadDB.TeconObjectChannel> TeconObjectChannelsDst = new List<ProgramReadDB.TeconObjectChannel>();
+                TeconObjectChannelsDst = TeconObjectChannels.Distinct().ToList();
+                if (TeconObjectChannelsDst.Count != obj.Channels.Count) 
+                {
+                    ObjTypeChannelsMatched.Add(obj.ObjTypeName);
+                    MessageBox.Show("Обнаружены повторяющиеся имена каналов у типа: '"  );
+                }*/
+//-------------------------------------------------------------------------------------------------------------------------------------------------
                 TeconObjects.Add(obj);
                 TeconObjectChannels.Clear();
                 TeconObjectDefChannels.Clear();
@@ -289,7 +400,7 @@ namespace ConnectToSCADABD
         {
             SQL_OBJTYPES = "Select OBJTYPEPARAM.NAME from OBJTYPEPARAM where OBJTYPEPARAM.PID = " + id;
             ProgramConnect connect = new ProgramConnect();
-            connect.ConnectToBase(SQL_OBJTYPES);
+            connect.ConnectToBase(SQL_OBJTYPES, BaseAddr);
 
             for (int i = 0; i < connect.dt1.Rows.Count; i++)
             {
@@ -365,7 +476,7 @@ namespace ConnectToSCADABD
             {
                 string SQL_KLASS = "Select * from KLASSIFIKATOR";
                 ProgramConnect connect = new ProgramConnect();
-                connect.ConnectToBase(SQL_KLASS);
+                connect.ConnectToBase(SQL_KLASS, BaseAddr);
 
                 foreach (TeconObject obj in TeconObjects)
                 {
