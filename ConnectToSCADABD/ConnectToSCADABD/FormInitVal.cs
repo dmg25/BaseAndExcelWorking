@@ -43,6 +43,7 @@ namespace ConnectToSCADABD
                 }
 
                 MessageBox.Show("Данные записаны");
+                label4.Visible = true;
             }
         }
 
@@ -108,9 +109,6 @@ namespace ConnectToSCADABD
             {
                 listBox1.Items.Add(list.Marka);
             }       
-            
-            
-        }
-
+         }
      }
 }

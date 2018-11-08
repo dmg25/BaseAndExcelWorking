@@ -219,34 +219,42 @@ namespace ConnectToSCADABD
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 ReadDB.SQLParams = ""; //очищаем предыдущий поиск параметров
-                loadfile.LoadExcelFile(openFileDialog1.FileName);
-                loadfile.ObjID.ForEach(delegate(int ID)
+                try
                 {
-                    if (!FirstIter)
+                    loadfile.LoadExcelFile(openFileDialog1.FileName);
+                    loadfile.ObjID.ForEach(delegate(int ID)
                     {
-                        ReadDB.SQLParams = ReadDB.SQLParams + ID.ToString();
-                    }
-                    else { ReadDB.SQLParams = ReadDB.SQLParams + "," + ID.ToString(); }
-                    FirstIter = true;
-                });
+                        if (!FirstIter)
+                        {
+                            ReadDB.SQLParams = ReadDB.SQLParams + ID.ToString();
+                        }
+                        else { ReadDB.SQLParams = ReadDB.SQLParams + "," + ID.ToString(); }
+                        FirstIter = true;
+                    });
 
-                textBox1.AppendText("========Новый файл=======\n");
-                textBox1.AppendText("Файл открыт;\n");
-                textBox1.AppendText(openFileDialog1.FileName.ToString() + ";\n");
-                textBox1.AppendText("ID объектов считаны (" + loadfile.ObjID.Count.ToString() + ")шт.;\n");
-                readID = true;
-                readBD = false;
+                    textBox1.AppendText("========Новый файл=======\n");
+                    textBox1.AppendText("Файл открыт;\n");
+                    textBox1.AppendText(openFileDialog1.FileName.ToString() + ";\n");
+                    textBox1.AppendText("ID объектов считаны (" + loadfile.ObjID.Count.ToString() + ")шт.;\n");
+                    readID = true;
+                    readBD = false;
 
-                button3.BackColor = Color.LightGreen;
-                //разблокировать кнопки дальше               
-                button1.Enabled = true; button1.BackColor = SystemColors.Control;
-                button4.Enabled = false; button4.BackColor = SystemColors.Control;
-                button5.Enabled = false; button5.BackColor = SystemColors.Control; 
-                
+                    button3.BackColor = Color.LightGreen;
+                    //разблокировать кнопки дальше               
+                    button1.Enabled = true; button1.BackColor = SystemColors.Control;
+                    button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                    button5.Enabled = false; button5.BackColor = SystemColors.Control;
 
-            //    comboBox1.Items.Clear(); // очистка списка листов
-                savefile.SaveTablesParamsList.Clear();
-           //     EnabledCheck();            
+
+                    //    comboBox1.Items.Clear(); // очистка списка листов
+                    savefile.SaveTablesParamsList.Clear();
+                    //     EnabledCheck();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                    return;
+                }
              }
           }
 
@@ -274,7 +282,7 @@ namespace ConnectToSCADABD
               string name = "";
               if (checkBox11.Checked) 
               {
-                  name = "ТеконИмпорт_Листов_1;_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
+                  name = "[Без каналов]ТеконИмпорт_Листов_1;_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
               } else 
               {
                   name = "ТеконИмпорт_Листов_" + ReadDB.TablesNum.ToString() + ";_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
@@ -426,18 +434,26 @@ namespace ConnectToSCADABD
         private void button6_Click(object sender, EventArgs e)
         {
             openDB.Filter = "Firebird DB files (*.GDB)|*.GDB";
-            if (openDB.ShowDialog() == DialogResult.OK)
+            try
             {
-                BaseAddr = openDB.FileName;
-                //закрасить цветом кнопку
-                button6.BackColor = Color.LightGreen;
-                //разблокировать кнопки дальше               
-                button3.Enabled = true;  button3.BackColor = SystemColors.Control;
-                button1.Enabled = false; button1.BackColor = SystemColors.Control;
-                button4.Enabled = false; button4.BackColor = SystemColors.Control;
-                button5.Enabled = false; button5.BackColor = SystemColors.Control;
-                ReadDB.BaseAddr = BaseAddr; //кидаем адрес базы в readBase
+                if (openDB.ShowDialog() == DialogResult.OK)
+                {
+                    BaseAddr = openDB.FileName;
+                    //закрасить цветом кнопку
+                    button6.BackColor = Color.LightGreen;
+                    //разблокировать кнопки дальше               
+                    button3.Enabled = true; button3.BackColor = SystemColors.Control;
+                    button1.Enabled = false; button1.BackColor = SystemColors.Control;
+                    button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                    button5.Enabled = false; button5.BackColor = SystemColors.Control;
+                    ReadDB.BaseAddr = BaseAddr; //кидаем адрес базы в readBase
 
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return;
             }
         }
 

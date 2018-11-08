@@ -9,8 +9,8 @@ namespace ConnectToSCADABD
 {
     public class ProgramReadDB
     {
-         System.Data.DataTable TmpDG = new System.Data.DataTable(); // переменная, чтобы не создавать новые таблицы при новом зарпосе
-         System.Data.DataTable dtDef = new System.Data.DataTable(); // таблица, которая собирается из двух.
+        System.Data.DataTable TmpDG = new System.Data.DataTable(); // переменная, чтобы не создавать новые таблицы при новом зарпосе
+        System.Data.DataTable dtDef = new System.Data.DataTable(); // таблица, которая собирается из двух.
 
         public string SQLParams; //часть запроса, содержащая перечень нужных строк
         public string SQL_CARDS; //запрос основных параметров объекта
@@ -312,7 +312,7 @@ namespace ConnectToSCADABD
                         string s = TeconObjectChannels[i].ED_IZM;
                         for (int l = 0; l < s.Length; l++)
                         {
-                            if (s[l].ToString() != " ") { j++; break; }
+                            if (s[l].ToString() != " ") { j++; break; } // если хоть один символ не свляется пробелом, то не скипаем канал
                             if (s.Length - 1 == l) { TeconObjectChannels[i].ED_IZM = "skipskipskip"; }
                         }
                     }

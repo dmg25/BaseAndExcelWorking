@@ -178,6 +178,53 @@ namespace ConnectToSCADABD
                     k1++;
                 }*/
 
+//-----------------------------блок создания шапки для каналов--------------------------------------------------------------------------------------
+
+                HeadExcelChList.Clear();  //на всякий случай очистим шапку из предыдущего листа
+                if (!SaveWithoutCh)
+                {
+                    foreach (ProgramReadDB.TeconObject TObj in TeconObjects)
+                    {
+                        //Создадим шапку таблицы и перечень используемых каналов
+
+                        bool b = true; // первый параметр запишем без условий
+
+                        if (TObj.Index == TblCount) 
+                        {
+
+                            foreach (ProgramReadDB.TeconObjectChannel Tch in TObj.Channels)
+                            {
+                                if (Tch.S0 != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S0", ChTitle = "Шкала барогр. низ" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.S100 != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "S100", ChTitle = "Шкала барогр. верх" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.M != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "M", ChTitle = "Округлить до" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.PLC_VARNAME != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "PLC_VARNAME", ChTitle = "PLC_переменная" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.ED_IZM != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "ED_IZM", ChTitle = "Ед. изм." }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.DISC != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "DISC", ChTitle = "Описание" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.KA != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KA", ChTitle = "Коэф. КА" }; HeadExcelChList.Add(obj); b = false; }
+                                if (Tch.KB != "skipskipskip") { var obj = new HeadExcelCh() { ChName = Tch.ChannelName, ChParam = "KB", ChTitle = "Коэф. КВ" }; HeadExcelChList.Add(obj); b = false; }
+                            }
+                        }
+                    }
+
+                    //Запишем шапку в Ecxel
+                    //предварительно уберем из списка повторяющиеся элементы
+                    var distinct = from item in HeadExcelChList
+                                   group item by new { item.ChName, item.ChTitle, item.ChParam } into matches
+                                   select matches.First();
+
+                    HeadExcelChList = new List<HeadExcelCh>(distinct);
+
+                    int k1 = 1;
+                    foreach (HeadExcelCh hec in HeadExcelChList)
+                    {
+                        sheet.Cells[1, 15 + k1] = new Cell(hec.ChName);
+                        sheet.Cells[2, 15 + k1] = new Cell(hec.ChTitle);
+                        sheet.Cells[3, 15 + k1] = new Cell(hec.ChParam);
+                        k1++;
+                    }
+                }
+//-----------------------------конец блока создания шапки------------------------------------------------------------------------------------------
+
 
                 bS0 = SaveTablesParamsList[TblCount - 1].S0;
                 bS100 = SaveTablesParamsList[TblCount - 1].S100;
@@ -211,7 +258,7 @@ namespace ConnectToSCADABD
                         sheet.Cells[TmpCounter + 4, 14] = new Cell(TObj.EVKLASSIFIKATORNAME);
                         sheet.Cells[TmpCounter + 4, 15] = new Cell(TObj.KLASSIFIKATORNAME);
 
-                        //Создадим шапку таблицы и перечень используемых каналов
+                      /*  //Создадим шапку таблицы и перечень используемых каналов
                         HeadExcelChList.Clear();  //на всякий случай очистим шапку из предыдущего листа
                         bool b = true; // первый параметр запишем без условий
                         if (!SaveWithoutCh)
@@ -243,7 +290,7 @@ namespace ConnectToSCADABD
                                 sheet.Cells[3, 15 + k1] = new Cell(hec.ChParam);
                                 k1++;
                             }
-                        }
+                        }*/
 
                         //Цикличное заполнение каналов
                         int k = 1;
