@@ -38,14 +38,26 @@ C:\Users\Erfinder\Desktop\программа экспорт-импорт\Connect
 C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
 C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
 C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormProcess.resources
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe.config
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.pdb
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csprojResolveAssemblyReference.cache
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormProcess.resources
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormInitVal.resources
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
-C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD (ищу баги рабочей версии)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe.config
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.pdb
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.exe
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\ConnectToSCADABD.pdb
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csprojResolveAssemblyReference.cache
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Form1.resources
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormProcess.resources
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.FormInitVal.resources
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.Properties.Resources.resources
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\obj\Debug\ConnectToSCADABD.csproj.GenerateResource.Cache
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\Microsoft.CSharp.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\Microsoft.VisualBasic.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\Microsoft.VisualBasic.PowerPacks.Vs.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Data.DataSetExtensions.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Data.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Deployment.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Drawing.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Windows.Forms.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Xml.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\System.Xml.Linq.dll
+C:\Users\Erfinder\Desktop\программа экспорт-импорт\ConnectToSCADABD(меняю структуру запросов)\ConnectToSCADABD\bin\Debug\ru\Microsoft.VisualBasic.PowerPacks.Vs.resources.dll

@@ -75,6 +75,10 @@ namespace ConnectToSCADABD
             ReadDB.TeconObjects.Clear();
             ReadDB.ObjTypeID.Clear();
             ReadDB.ObjTypeChannelsMatched.Clear();
+            ReadDB.SQL_Channels.Clear();
+            ReadDB.SQL_DefChannels.Clear();
+            ReadDB.SQL_Objects.Clear();
+
             preIndexCombobox = 0;
             textBox1.AppendText("Начат сбор данных из БД;\n");
 
@@ -87,7 +91,12 @@ namespace ConnectToSCADABD
             Thread.Sleep(10); 
             Enabled = false; // относится к форме
 
+
+            //перенос ID в новый лист.
+            ReadDB.Big_SQL(loadfile.ObjID);
+
             int i = 0;
+
             foreach (int ID in loadfile.ObjID)   // для каждого распознанного ID делаем SQL запрос с последующими действиями
             {
                 ReadDB.AddObjChannel(ID);     //добавляем каждый канал каждого тех объекта в список
@@ -119,6 +128,113 @@ namespace ConnectToSCADABD
             //разблокировать кнопки дальше               
             button4.Enabled = true; button4.BackColor = SystemColors.Control;
             button5.Enabled = true; button5.BackColor = SystemColors.Control; 
+
+            //блок вывода sql листов на форму
+            dataGridView1.ColumnCount = 12;
+            dataGridView1.Columns[0].Name = "S0";
+            dataGridView1.Columns[1].Name = "S100";
+            dataGridView1.Columns[2].Name = "M";
+            dataGridView1.Columns[3].Name = "PLC_VARNAME";
+            dataGridView1.Columns[4].Name = "ED_IZM";
+            dataGridView1.Columns[5].Name = "ARH_APP";
+            dataGridView1.Columns[6].Name = "DISC";
+            dataGridView1.Columns[7].Name = "KA";
+            dataGridView1.Columns[8].Name = "KB";
+            dataGridView1.Columns[9].Name = "ID";
+            dataGridView1.Columns[10].Name = "ChannelName";
+            dataGridView1.Columns[11].Name = "LoadID";
+
+            for (int p = 0; p<ReadDB.SQL_Channels.Count; p++)
+            {
+                dataGridView1.Rows.Add();
+                dataGridView1.Rows[p].Cells[0].Value = ReadDB.SQL_Channels[p].S0;
+                dataGridView1.Rows[p].Cells[1].Value = ReadDB.SQL_Channels[p].S100;
+                dataGridView1.Rows[p].Cells[2].Value = ReadDB.SQL_Channels[p].M;
+                dataGridView1.Rows[p].Cells[3].Value = ReadDB.SQL_Channels[p].PLC_VARNAME;
+                dataGridView1.Rows[p].Cells[4].Value = ReadDB.SQL_Channels[p].ED_IZM;
+                dataGridView1.Rows[p].Cells[5].Value = ReadDB.SQL_Channels[p].ARH_APP;
+                dataGridView1.Rows[p].Cells[6].Value = ReadDB.SQL_Channels[p].DISC;
+                dataGridView1.Rows[p].Cells[7].Value = ReadDB.SQL_Channels[p].KA;
+                dataGridView1.Rows[p].Cells[8].Value = ReadDB.SQL_Channels[p].KB;
+                dataGridView1.Rows[p].Cells[9].Value = ReadDB.SQL_Channels[p].ID;
+                dataGridView1.Rows[p].Cells[10].Value = ReadDB.SQL_Channels[p].ChannelName;
+                dataGridView1.Rows[p].Cells[11].Value = ReadDB.SQL_Channels[p].LoadID;                  
+            }
+            label1.Text = ReadDB.SQL_Channels.Count.ToString();
+
+            dataGridView2.ColumnCount = 12;
+            dataGridView2.Columns[0].Name = "S0";
+            dataGridView2.Columns[1].Name = "S100";
+            dataGridView2.Columns[2].Name = "M";
+            dataGridView2.Columns[3].Name = "PLC_VARNAME";
+            dataGridView2.Columns[4].Name = "ED_IZM";
+            dataGridView2.Columns[5].Name = "ARH_APP";
+            dataGridView2.Columns[6].Name = "DISC";
+            dataGridView2.Columns[7].Name = "KA";
+            dataGridView2.Columns[8].Name = "KB";
+            dataGridView2.Columns[9].Name = "ID";
+            dataGridView2.Columns[10].Name = "ChannelName";
+            dataGridView2.Columns[11].Name = "LoadID";
+
+            for (int p = 0; p < ReadDB.SQL_DefChannels.Count; p++)
+            {
+                dataGridView2.Rows.Add();
+                dataGridView2.Rows[p].Cells[0].Value = ReadDB.SQL_DefChannels[p].S0;
+                dataGridView2.Rows[p].Cells[1].Value = ReadDB.SQL_DefChannels[p].S100;
+                dataGridView2.Rows[p].Cells[2].Value = ReadDB.SQL_DefChannels[p].M;
+                dataGridView2.Rows[p].Cells[3].Value = ReadDB.SQL_DefChannels[p].PLC_VARNAME;
+                dataGridView2.Rows[p].Cells[4].Value = ReadDB.SQL_DefChannels[p].ED_IZM;
+                dataGridView2.Rows[p].Cells[5].Value = ReadDB.SQL_DefChannels[p].ARH_APP;
+                dataGridView2.Rows[p].Cells[6].Value = ReadDB.SQL_DefChannels[p].DISC;
+                dataGridView2.Rows[p].Cells[7].Value = ReadDB.SQL_DefChannels[p].KA;
+                dataGridView2.Rows[p].Cells[8].Value = ReadDB.SQL_DefChannels[p].KB;
+                dataGridView2.Rows[p].Cells[9].Value = ReadDB.SQL_DefChannels[p].ID;
+                dataGridView2.Rows[p].Cells[10].Value = ReadDB.SQL_DefChannels[p].ChannelName;
+                dataGridView2.Rows[p].Cells[11].Value = ReadDB.SQL_DefChannels[p].LoadID;
+            }
+            label2.Text = ReadDB.SQL_DefChannels.Count.ToString();
+
+            dataGridView3.ColumnCount = 17;
+            dataGridView3.Columns[0].Name = "Marka";
+            dataGridView3.Columns[1].Name = "Name";
+            dataGridView3.Columns[2].Name = "Disc";
+            dataGridView3.Columns[3].Name = "ObjTypeName";
+            dataGridView3.Columns[4].Name = "Arc_Per";
+            dataGridView3.Columns[5].Name = "ObjSign";
+            dataGridView3.Columns[6].Name = "PLC_Name";
+            dataGridView3.Columns[7].Name = "PLC_GR";
+            dataGridView3.Columns[8].Name = "EVKLASSIFIKATORNAME";
+            dataGridView3.Columns[9].Name = "KKS";
+            dataGridView3.Columns[10].Name = "POUNAME";
+            dataGridView3.Columns[11].Name = "KLASSIFIKATORNAME";
+            dataGridView3.Columns[12].Name = "PLC_varname";
+            dataGridView3.Columns[13].Name = "PLC_address";
+            dataGridView3.Columns[14].Name = "ObjTypeID";
+            dataGridView3.Columns[15].Name = "LoadID";
+
+
+            for (int p = 0; p < ReadDB.SQL_Objects.Count; p++)
+            {
+                dataGridView3.Rows.Add();
+                dataGridView3.Rows[p].Cells[0].Value = ReadDB.SQL_Objects[p].Marka;
+                dataGridView3.Rows[p].Cells[1].Value = ReadDB.SQL_Objects[p].Name;
+                dataGridView3.Rows[p].Cells[2].Value = ReadDB.SQL_Objects[p].Disc;
+                dataGridView3.Rows[p].Cells[3].Value = ReadDB.SQL_Objects[p].ObjTypeName;
+                dataGridView3.Rows[p].Cells[4].Value = ReadDB.SQL_Objects[p].Arc_Per;
+                dataGridView3.Rows[p].Cells[5].Value = ReadDB.SQL_Objects[p].ObjSign;
+                dataGridView3.Rows[p].Cells[6].Value = ReadDB.SQL_Objects[p].PLC_Name;
+                dataGridView3.Rows[p].Cells[7].Value = ReadDB.SQL_Objects[p].PLC_GR;
+                dataGridView3.Rows[p].Cells[8].Value = ReadDB.SQL_Objects[p].EVKLASSIFIKATORNAME;
+                dataGridView3.Rows[p].Cells[9].Value = ReadDB.SQL_Objects[p].KKS;
+                dataGridView3.Rows[p].Cells[10].Value = ReadDB.SQL_Objects[p].POUNAME;
+                dataGridView3.Rows[p].Cells[11].Value = ReadDB.SQL_Objects[p].KLASSIFIKATORNAME;
+                dataGridView3.Rows[p].Cells[12].Value = ReadDB.SQL_Objects[p].PLC_varname;
+                dataGridView3.Rows[p].Cells[13].Value = ReadDB.SQL_Objects[p].PLC_address;
+                dataGridView3.Rows[p].Cells[14].Value = ReadDB.SQL_Objects[p].ObjTypeID;
+                dataGridView3.Rows[p].Cells[15].Value = ReadDB.SQL_Objects[p].LoadID;
+            }
+            label3.Text = ReadDB.SQL_Objects.Count.ToString();
+            //-------------------------------
 
           
         }
@@ -219,42 +335,34 @@ namespace ConnectToSCADABD
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 ReadDB.SQLParams = ""; //очищаем предыдущий поиск параметров
-                try
+                loadfile.LoadExcelFile(openFileDialog1.FileName);
+                loadfile.ObjID.ForEach(delegate(int ID)
                 {
-                    loadfile.LoadExcelFile(openFileDialog1.FileName);
-                    loadfile.ObjID.ForEach(delegate(int ID)
+                    if (!FirstIter)
                     {
-                        if (!FirstIter)
-                        {
-                            ReadDB.SQLParams = ReadDB.SQLParams + ID.ToString();
-                        }
-                        else { ReadDB.SQLParams = ReadDB.SQLParams + "," + ID.ToString(); }
-                        FirstIter = true;
-                    });
+                        ReadDB.SQLParams = ReadDB.SQLParams + ID.ToString();
+                    }
+                    else { ReadDB.SQLParams = ReadDB.SQLParams + "," + ID.ToString(); }
+                    FirstIter = true;
+                });
 
-                    textBox1.AppendText("========Новый файл=======\n");
-                    textBox1.AppendText("Файл открыт;\n");
-                    textBox1.AppendText(openFileDialog1.FileName.ToString() + ";\n");
-                    textBox1.AppendText("ID объектов считаны (" + loadfile.ObjID.Count.ToString() + ")шт.;\n");
-                    readID = true;
-                    readBD = false;
+                textBox1.AppendText("========Новый файл=======\n");
+                textBox1.AppendText("Файл открыт;\n");
+                textBox1.AppendText(openFileDialog1.FileName.ToString() + ";\n");
+                textBox1.AppendText("ID объектов считаны (" + loadfile.ObjID.Count.ToString() + ")шт.;\n");
+                readID = true;
+                readBD = false;
 
-                    button3.BackColor = Color.LightGreen;
-                    //разблокировать кнопки дальше               
-                    button1.Enabled = true; button1.BackColor = SystemColors.Control;
-                    button4.Enabled = false; button4.BackColor = SystemColors.Control;
-                    button5.Enabled = false; button5.BackColor = SystemColors.Control;
+                button3.BackColor = Color.LightGreen;
+                //разблокировать кнопки дальше               
+                button1.Enabled = true; button1.BackColor = SystemColors.Control;
+                button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                button5.Enabled = false; button5.BackColor = SystemColors.Control; 
+                
 
-
-                    //    comboBox1.Items.Clear(); // очистка списка листов
-                    savefile.SaveTablesParamsList.Clear();
-                    //     EnabledCheck();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    return;
-                }
+            //    comboBox1.Items.Clear(); // очистка списка листов
+                savefile.SaveTablesParamsList.Clear();
+           //     EnabledCheck();            
              }
           }
 
@@ -282,7 +390,7 @@ namespace ConnectToSCADABD
               string name = "";
               if (checkBox11.Checked) 
               {
-                  name = "[Без каналов]ТеконИмпорт_Листов_1;_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
+                  name = "ТеконИмпорт_Листов_1;_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
               } else 
               {
                   name = "ТеконИмпорт_Листов_" + ReadDB.TablesNum.ToString() + ";_Объектов_" + ReadDB.TeconObjects.Count.ToString() + ";_" + DateTime.Now.ToString(culture);
@@ -434,26 +542,18 @@ namespace ConnectToSCADABD
         private void button6_Click(object sender, EventArgs e)
         {
             openDB.Filter = "Firebird DB files (*.GDB)|*.GDB";
-            try
+            if (openDB.ShowDialog() == DialogResult.OK)
             {
-                if (openDB.ShowDialog() == DialogResult.OK)
-                {
-                    BaseAddr = openDB.FileName;
-                    //закрасить цветом кнопку
-                    button6.BackColor = Color.LightGreen;
-                    //разблокировать кнопки дальше               
-                    button3.Enabled = true; button3.BackColor = SystemColors.Control;
-                    button1.Enabled = false; button1.BackColor = SystemColors.Control;
-                    button4.Enabled = false; button4.BackColor = SystemColors.Control;
-                    button5.Enabled = false; button5.BackColor = SystemColors.Control;
-                    ReadDB.BaseAddr = BaseAddr; //кидаем адрес базы в readBase
+                BaseAddr = openDB.FileName;
+                //закрасить цветом кнопку
+                button6.BackColor = Color.LightGreen;
+                //разблокировать кнопки дальше               
+                button3.Enabled = true;  button3.BackColor = SystemColors.Control;
+                button1.Enabled = false; button1.BackColor = SystemColors.Control;
+                button4.Enabled = false; button4.BackColor = SystemColors.Control;
+                button5.Enabled = false; button5.BackColor = SystemColors.Control;
+                ReadDB.BaseAddr = BaseAddr; //кидаем адрес базы в readBase
 
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-                return;
             }
         }
 

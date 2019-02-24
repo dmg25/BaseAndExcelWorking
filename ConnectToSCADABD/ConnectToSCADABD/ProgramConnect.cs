@@ -94,27 +94,15 @@ namespace ConnectToSCADABD
                     return;
                 }
 
-                // Транзакция, которая тупо откуда-то скопирована
-              /*  FbTransactionOptions fbto = new FbTransactionOptions();
-                fbto.TransactionBehavior = FbTransactionBehavior.NoWait |
-                     FbTransactionBehavior.ReadCommitted |
-                     FbTransactionBehavior.RecVersion;*/
-                FbTransaction fbt = fbc.BeginTransaction(/*fbto*/);
-
-               
-
+                FbTransaction fbt = fbc.BeginTransaction();
                 FbCommand fbcom = new FbCommand(SQL, fbc, fbt);
 
                 fbcom.Transaction = fbt;
 
-               // fbcom.ExecuteNonQuery();
-
-
                 try
                 {
                     int res = fbcom.ExecuteNonQuery(); //для запросов, не возвращающих набор данных (insert, update, delete) надо вызывать этот метод
-                 //   MessageBox.Show("SUCCESS: " + res.ToString());
-                    fbt.Commit(); //если вставка прошла успешно - комитим транзакцию
+                    fbt.Commit(); //если вставка прошла успешно - применяем транзакцию
                 }
                 catch (Exception ex)
                 {
@@ -122,42 +110,7 @@ namespace ConnectToSCADABD
                 }
 
                     fbcom.Dispose(); //в документации написано, что ОЧЕНЬ рекомендуется убивать объекты этого типа, если они больше не нужны
-                    //fbt.Rollback();
                     fbc.Close();
-                
-
-             
-
-
-
-
-
-                // Создаем адаптер данных
-             /*   FbDataAdapter fbda = new FbDataAdapter(fbcom);
-
-                DataSet ds = new DataSet();   //из формы не тащится, видимо там надо задавать способ подключения через стандартные способы, а они не пашут.
-
-                try
-                {
-                    fbda.Fill(ds);  // заполняем DataSet
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message,
-                        System.IO.Path.GetFileName(
-                        System.Reflection.Assembly.GetExecutingAssembly().Location));
-                    return;
-                }
-                finally
-                {
-                    fbt.Rollback();
-                    fbc.Close();
-                }
-
-                dt1 = ds.Tables[0];
-
-                if (dt1.Rows.Count == 0) return;*/
-
             }
         }
     }
